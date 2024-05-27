@@ -5,32 +5,29 @@ const bcrypt = require('bcryptjs');
 const multer = require('multer');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
-const compression = require('compression'); // Import compression middleware
+const AWS = require('aws-sdk');
+const fs = require('fs');
+const PORT = 4000;
 
 const app = express();
+
+const s3 = new AWS.S3({
+  region: 'us-east-1',
+});
 
 const url = 'mongodb+srv://g7selfdrivecars:G7cars123@cluster0.77lf8cj.mongodb.net/G7Cars?retryWrites=true&w=majority';
 
 let client;
 
-app.use(cors({
-  origin: ['http://localhost:3000', 'https://www.g7cars.com'],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'], 
-  credentials: true,
-}));
-
+app.use(cors());
 app.use(express.json());
-
-// Enable compression middleware
-app.use(compression());
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
 async function connectToMongoDB() {
   if (!client) {
-    client = new MongoClient(url);
+    client = new MongoClient(url, { useNewUrlParser: true, useUnifiedTopology: true });
     await client.connect();
     console.log('Connected to MongoDB');
   }
@@ -83,15 +80,18 @@ app.post('/cars', upload.fields([
 
     const insert = req.body;
 
-    insert.Coverimage = req.files?.['Coverimage']?.[0]?.buffer;
-    insert.RcFront = req.files?.['RcFront']?.[0]?.buffer;
-    insert.RcBack = req.files?.['RcBack']?.[0]?.buffer;
-    insert.AdhaarFront = req.files?.['AdhaarFront']?.[0]?.buffer;
-    insert.AdhaarBack = req.files?.['AdhaarBack']?.[0]?.buffer;
-    insert.Insurance = req.files?.['Insurance']?.[0]?.buffer;
-    insert.Pollution = req.files?.['Pollution']?.[0]?.buffer;
-    insert.Images = req.files?.['Images']?.[0]?.buffer;
-    insert.AgreementDoc = req.files?.['AgreementDoc']?.[0]?.buffer;
+    const promises = [];
+    for (const fieldName of Object.keys(req.files)) {
+      const file = req.files[fieldName][0];
+      const params = {
+        Bucket: 'g7backend',
+        Key: `${fieldName}/${file.originalname}`,
+        Body: file.buffer,
+      };
+      promises.push(s3.upload(params).promise());
+    }
+
+    await Promise.all(promises);
 
     await collection.insertOne(insert);
 
@@ -125,5 +125,7 @@ app.put('/cars/:id', async (req, res) => {
   }
 });
 
-module.exports = app;
+
+app.listen(PORT);
+
 module.exports.handler = serverless(app);
