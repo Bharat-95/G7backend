@@ -12,11 +12,12 @@ const url = 'mongodb+srv://g7selfdrivecars:G7cars123@cluster0.77lf8cj.mongodb.ne
 
 let client;
 
-
 app.use(cors({
-  origin: ['http://localhost:3000', 'https://www.g7cars.com', 'https://g7-admin-frontend.vercel.app'],
+  origin: ['http://localhost:3000', 'https://www.g7cars.com'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'], // Add any custom headers here
+  credentials: true,
 }));
-
 
 app.use(express.json());
 
