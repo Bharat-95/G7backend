@@ -3,7 +3,7 @@ const express = require('express');
 const serverless = require('serverless-http');
 const bcrypt = require('bcryptjs');
 const multer = require('multer');
-const cors = require('cors'); 
+const cors = require('cors');
 const jwt = require('jsonwebtoken');
 
 const app = express();
@@ -12,7 +12,12 @@ const url = 'mongodb+srv://g7selfdrivecars:G7cars123@cluster0.77lf8cj.mongodb.ne
 
 let client;
 
-app.use(cors());
+app.use(cors({
+  origin: ['http://localhost:3000', 'https://www.g7cars.com'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'], 
+  credentials: true,
+}));
 
 app.use(express.json());
 
@@ -116,4 +121,5 @@ app.put('/cars/:id', async (req, res) => {
   }
 });
 
+module.exports = app;
 module.exports.handler = serverless(app);
