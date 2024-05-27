@@ -8,7 +8,6 @@ const jwt = require('jsonwebtoken');
 
 const app = express();
 
-
 const url = 'mongodb+srv://g7selfdrivecars:G7cars123@cluster0.77lf8cj.mongodb.net/G7Cars?retryWrites=true&w=majority';
 
 let client;
@@ -116,6 +115,5 @@ app.put('/cars/:id', async (req, res) => {
   }
 });
 
-
-
+module.exports = app;
 module.exports.handler = serverless(app);
