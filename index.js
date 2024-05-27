@@ -21,7 +21,7 @@ const upload = multer({ storage: storage });
 
 async function connectToMongoDB() {
   if (!client) {
-    client = new MongoClient(url, { useNewUrlParser: true, useUnifiedTopology: true });
+    client = new MongoClient(url);
     await client.connect();
     console.log('Connected to MongoDB');
   }
