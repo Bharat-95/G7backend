@@ -5,6 +5,7 @@ const bcrypt = require('bcryptjs');
 const multer = require('multer');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
+const compression = require('compression'); // Import compression middleware
 
 const app = express();
 
@@ -12,9 +13,17 @@ const url = 'mongodb+srv://g7selfdrivecars:G7cars123@cluster0.77lf8cj.mongodb.ne
 
 let client;
 
-app.use(cors());
+app.use(cors({
+  origin: ['http://localhost:3000', 'https://www.g7cars.com'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'], 
+  credentials: true,
+}));
 
 app.use(express.json());
+
+// Enable compression middleware
+app.use(compression());
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
@@ -34,41 +43,15 @@ app.get('/', (req, res) => {
 
 app.get('/cars', async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1; // Default to page 1 if not provided
-    const perPage = parseInt(req.query.perPage) || 10; // Default to 10 cars per page
-    const skip = (page - 1) * perPage;
-
     const db = await connectToMongoDB();
     const collection = db.collection('Cars');
-
-    // Query MongoDB for paginated cars
-    const data = await collection.find({})
-      .skip(skip)
-      .limit(perPage)
-      .toArray();
-
-    // Get total count of cars (for calculating pagination metadata)
-    const totalCount = await collection.countDocuments();
-    
-    // Calculate total pages
-    const totalPages = Math.ceil(totalCount / perPage);
-
-    // Construct pagination metadata
-    const pagination = {
-      page,
-      perPage,
-      totalPages,
-      totalCount
-    };
-
-    // Send paginated data and pagination metadata in the response
-    res.json({ data, pagination });
+    const data = await collection.find({}).toArray();
+    res.json(data);
   } catch (error) {
     console.error('Unable to fetch data', error);
     res.status(500).send('Unable to fetch data from MongoDB');
   }
 });
-
 
 app.delete('/cars/:id', async (req, res) => {
   try {
