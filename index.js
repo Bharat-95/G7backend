@@ -67,23 +67,25 @@ app.post('/cars', upload.fields([
   }
 });
 
-app.get('/cars/:id', async (req, res) => {
+app.get('/cars', async (req, res) => {
   try {
     const params = {
       TableName: tableName,
-      Key: {
-        id: req.params.id
-      }
     };
-    const data = await dynamoDb.get(params).promise();
-    if (!data.Item) {
-      res.status(404).send('Car not found');
-      return;
-    }
+    const data = await dynamoDb.scan(params).promise();
 
-    const responseData = {
-      ...data.Item
-    };
+    // Construct response with image URLs
+    const responseData = data.Items.map(item => ({
+      ...item,
+      Coverimage: item.Coverimage ? item.Coverimage.map(url => `${s3.endpoint.href}${s3.config.params.Bucket}/${url}`) : [],
+      RcFront: item.RcFront ? item.RcFront.map(url => `${s3.endpoint.href}${s3.config.params.Bucket}/${url}`) : [],
+      RcBack: item.RcBack ? item.RcBack.map(url => `${s3.endpoint.href}${s3.config.params.Bucket}/${url}`) : [],
+      AdhaarFront: item.AdhaarFront ? item.AdhaarFront.map(url => `${s3.endpoint.href}${s3.config.params.Bucket}/${url}`) : [],
+      AdhaarBack: item.AdhaarBack ? item.AdhaarBack.map(url => `${s3.endpoint.href}${s3.config.params.Bucket}/${url}`) : [],
+      Insurance: item.Insurance ? item.Insurance.map(url => `${s3.endpoint.href}${s3.config.params.Bucket}/${url}`) : [],
+      Pollution: item.Pollution ? item.Pollution.map(url => `${s3.endpoint.href}${s3.config.params.Bucket}/${url}`) : [],
+      AgreementDoc: item.AgreementDoc ? item.AgreementDoc.map(url => `${s3.endpoint.href}${s3.config.params.Bucket}/${url}`) : [],
+    }));
 
     res.status(200).json(responseData);
   } catch (error) {
