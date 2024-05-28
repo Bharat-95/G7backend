@@ -1,5 +1,4 @@
 const express = require('express');
-const { db, bucket } = require('./firebaseconfig.js');
 const { v4: uuidv4 } = require('uuid');
 const app = express();
 
