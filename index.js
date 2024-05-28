@@ -73,24 +73,15 @@ app.get('/cars', async (req, res) => {
       TableName: tableName,
     };
     const data = await dynamoDb.scan(params).promise();
-
-    // Construct response with image URLs
-    const responseData = data.Items.map(item => ({
-      ...item,
-      Coverimage: item.Coverimage ? item.Coverimage.map(url => `${s3.endpoint.href}${s3.config.params.Bucket}/${url}`) : [],
-      RcFront: item.RcFront ? item.RcFront.map(url => `${s3.endpoint.href}${s3.config.params.Bucket}/${url}`) : [],
-      RcBack: item.RcBack ? item.RcBack.map(url => `${s3.endpoint.href}${s3.config.params.Bucket}/${url}`) : [],
-      AdhaarFront: item.AdhaarFront ? item.AdhaarFront.map(url => `${s3.endpoint.href}${s3.config.params.Bucket}/${url}`) : [],
-      AdhaarBack: item.AdhaarBack ? item.AdhaarBack.map(url => `${s3.endpoint.href}${s3.config.params.Bucket}/${url}`) : [],
-      Insurance: item.Insurance ? item.Insurance.map(url => `${s3.endpoint.href}${s3.config.params.Bucket}/${url}`) : [],
-      Pollution: item.Pollution ? item.Pollution.map(url => `${s3.endpoint.href}${s3.config.params.Bucket}/${url}`) : [],
-      AgreementDoc: item.AgreementDoc ? item.AgreementDoc.map(url => `${s3.endpoint.href}${s3.config.params.Bucket}/${url}`) : [],
+    // Fetch image URLs from S3 for each car
+    const carsWithImages = await Promise.all(data.Items.map(async (car) => {
+      const images = await fetchImagesFromS3(car);
+      return { ...car, images };
     }));
-
-    res.status(200).json(responseData);
+    res.json(carsWithImages);
   } catch (error) {
-    console.error('Error retrieving car data:', error);
-    res.status(500).send('Unable to retrieve car data');
+    console.error('Error fetching data from DynamoDB:', error);
+    res.status(500).send('Unable to fetch data from DynamoDB');
   }
 });
 
