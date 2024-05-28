@@ -64,7 +64,7 @@ app.post('/cars', upload.fields([
 ]), async (req, res) => {
   try {
     const item = {
-      id: uuidv4(),
+      G7cars123: uuidv4(),
       ...req.body
     };
 
