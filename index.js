@@ -1,117 +1,137 @@
 const express = require('express');
 const app = express();
 const port = process.env.PORT || 4000;
-const { MongoClient, ObjectId } = require('mongodb');
-
+const AWS = require('aws-sdk');
 const cors = require('cors');
 const multer = require('multer');
+const multerS3 = require('multer-s3');
+const { v4: uuidv4 } = require('uuid');
 
 
-const url = 'mongodb+srv://g7selfdrivecars:G7cars123@cluster0.77lf8cj.mongodb.net/G7Cars?retryWrites=true&w=majority';
+AWS.config.update({ region: 'us-east-1' });
 
-let client;
+const s3 = new AWS.S3();
+const dynamoDb = new AWS.DynamoDB.DocumentClient();
+const tableName = 'G7Cars';
 
 app.use(cors());
 app.use(express.json());
 
-const storage = multer.memoryStorage();
+
+const storage = multerS3({
+  s3: s3,
+  bucket: 'g7backend',
+  metadata: (req, file, cb) => {
+    cb(null, { fieldName: file.fieldname });
+  },
+  key: (req, file, cb) => {
+    cb(null, `${uuidv4()}_${file.originalname}`);
+  }
+});
+
 const upload = multer({ storage: storage });
 
-async function run() {
+
+app.get('/cars', async (req, res) => {
   try {
-    client = await MongoClient.connect(url);
+    const params = {
+      TableName: tableName,
+    };
 
-    app.get('/', (req, res) => {
-      res.send('Hello World!')
-    });
-
-    app.get('/cars', async (req, res) => {
-      try {
-        const db = client.db('G7Cars');
-        const collection = db.collection('Cars');
-        const data = await collection.find({}).toArray();
-        res.json(data);
-      } catch (error) {
-        console.error('Unable to fetch data', error);
-        res.status(500).send('Unable to fetch data from MongoDB');
-      }
-    });
-
-    app.delete('/cars/:id', async (req, res) => {
-      try {
-        const db = client.db('G7Cars');
-        const collection = db.collection('Cars');
-        const id = req.params.id;
-        await collection.deleteOne({ _id: new ObjectId(id) });
-        res.json({ message: 'Data deleted from MongoDB' });
-      } catch (error) {
-        console.error('Error deleting product', error);
-        res.status(500).send('Unable to delete data from MongoDB');
-      }
-    });
-
-    app.post('/cars', upload.fields([
-      { name: 'Coverimage', maxCount: 1 },
-      { name: 'RcFront', maxCount: 1 },
-      { name: 'RcBack', maxCount: 1 },
-      { name: 'AdhaarFront', maxCount: 1 },
-      { name: 'AdhaarBack', maxCount: 1 },
-      { name: 'Insurance', maxCount: 1 },
-      { name: 'Pollution', maxCount: 1 },
-      { name: 'Images', maxCount: 30 },
-      { name: 'AgreementDoc', maxCount: 1 }
-    ]), async (req, res) => {
-      try {
-        const db = client.db('G7Cars');
-        const collection = db.collection('Cars');
-    
-        const insert = req.body;
-        const files = req.files;
-    
-        for (const fieldName of Object.keys(files)) {
-          const file = files[fieldName][0];
-          insert[fieldName] = new mongodb.Binary(file.buffer);
-        }
-        await collection.insertOne(insert);
-    
-        res.status(200).send('Uploaded data successfully');
-      } catch (error) {
-        console.error('Unable to post details', error);
-        res.status(500).send('Unable to post details to MongoDB');
-      }
-    });
-    
-
-    app.put('/cars/:id', async (req, res) => {
-      try {
-        const db = client.db('G7Cars');
-        const collection = db.collection('Cars');
-        const id = req.params.id;
-        const updateData = req.body;
-
-        const result = await collection.updateOne(
-          { _id: new ObjectId(id) },
-          { $set: updateData }
-        );
-
-        if (result.modifiedCount === 1) {
-          res.status(200).send('Car details updated successfully');
-        } else {
-          res.status(404).send('Car not found or no changes made');
-        }
-      } catch (error) {
-        console.error('Unable to update car details', error);
-        res.status(500).send('Unable to update car details in MongoDB');
-      }
-    });
-
-    app.listen(port, () => {
-      console.log(`Example app listening on port ${port}`);
-    });
-
+    const data = await dynamoDb.scan(params).promise();
+    res.json(data.Items);
   } catch (error) {
-    console.error('Unable to connect to MongoDB', error);
+    console.error('Unable to fetch data', error);
+    res.status(500).send('Unable to fetch data from DynamoDB');
   }
-}
+});
 
-run();
+
+app.delete('/cars/:id', async (req, res) => {
+  try {
+    const params = {
+      TableName: tableName,
+      Key: {
+        id: req.params.id,
+      },
+    };
+
+    await dynamoDb.delete(params).promise();
+    res.json({ message: 'Data deleted from DynamoDB' });
+  } catch (error) {
+    console.error('Error deleting product', error);
+    res.status(500).send('Unable to delete data from DynamoDB');
+  }
+});
+
+
+app.post('/cars', upload.fields([
+  { name: 'Coverimage', maxCount: 1 },
+  { name: 'RcFront', maxCount: 1 },
+  { name: 'RcBack', maxCount: 1 },
+  { name: 'AdhaarFront', maxCount: 1 },
+  { name: 'AdhaarBack', maxCount: 1 },
+  { name: 'Insurance', maxCount: 1 },
+  { name: 'Pollution', maxCount: 1 },
+  { name: 'Images', maxCount: 30 },
+  { name: 'AgreementDoc', maxCount: 1 }
+]), async (req, res) => {
+  try {
+    const item = {
+      id: uuidv4(),
+      ...req.body
+    };
+
+    const files = req.files;
+    for (const fieldName of Object.keys(files)) {
+      item[fieldName] = files[fieldName].map(file => file.location);
+    }
+
+    const params = {
+      TableName: tableName,
+      Item: item,
+    };
+
+    await dynamoDb.put(params).promise();
+    res.status(200).send('Uploaded data successfully');
+  } catch (error) {
+    console.error('Unable to post details', error);
+    res.status(500).send('Unable to post details to DynamoDB');
+  }
+});
+
+// Route to update car details in DynamoDB
+app.put('/cars/:id', async (req, res) => {
+  try {
+    const params = {
+      TableName: tableName,
+      Key: {
+        id: req.params.id,
+      },
+      UpdateExpression: 'set #attrName = :attrValue',
+      ExpressionAttributeNames: {
+        '#attrName': Object.keys(req.body)[0]
+      },
+      ExpressionAttributeValues: {
+        ':attrValue': Object.values(req.body)[0]
+      },
+      ReturnValues: 'UPDATED_NEW'
+    };
+
+    const result = await dynamoDb.update(params).promise();
+
+    if (result.Attributes) {
+      res.status(200).send('Car details updated successfully');
+    } else {
+      res.status(404).send('Car not found or no changes made');
+    }
+  } catch (error) {
+    console.error('Unable to update car details', error);
+    res.status(500).send('Unable to update car details in DynamoDB');
+  }
+});
+
+
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
+});
