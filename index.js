@@ -4,6 +4,11 @@ const port = process.env.PORT || 4000;
 const AWS = require('aws-sdk');
 const cors = require('cors');
 const { v4: uuidv4 } = require('uuid');
+const multer = require('multer'); 
+
+const storage = multer.memoryStorage();
+
+const upload = multer({ storage: storage });
 
 AWS.config.update({ region: 'us-east-1' });
 
@@ -44,7 +49,19 @@ app.delete('/cars/:id', async (req, res) => {
   }
 });
 
-app.post('/cars', async (req, res) => {
+
+
+app.post('/cars', upload.fields([
+  { name: 'Coverimage', maxCount: 1 },
+  { name: 'RcFront', maxCount: 1 },
+  { name: 'RcBack', maxCount: 1 },
+  { name: 'AdhaarFront', maxCount: 1 },
+  { name: 'AdhaarBack', maxCount: 1 },
+  { name: 'Insurance', maxCount: 1 },
+  { name: 'Pollution', maxCount: 1 },
+  { name: 'Images', maxCount: 30 },
+  { name: 'AgreementDoc', maxCount: 1 }
+]), async (req, res) => {
   try {
     const item = {
       id: uuidv4(),
@@ -54,9 +71,9 @@ app.post('/cars', async (req, res) => {
     const imageFields = ['Coverimage', 'RcFront', 'RcBack', 'AdhaarFront', 'AdhaarBack', 'Insurance', 'Pollution', 'AgreementDoc'];
     for (const field of imageFields) {
       if (req.files[field] && req.files[field].length > 0) {
-        const images = req.files[field]; // Get array of image files for this field
-        const imageBuffers = images.map(image => image.buffer); // Get array of image buffers
-        item[field] = imageBuffers; // Store image buffers in the item object
+        const images = req.files[field]; 
+        const imageBuffers = images.map(image => image.buffer);
+        item[field] = imageBuffers;
       }
     }
 
