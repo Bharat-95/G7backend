@@ -6,47 +6,18 @@ const cors = require('cors');
 const { v4: uuidv4 } = require('uuid');
 const multer = require('multer');
 
-const storage = multer.memoryStorage();
-const upload = multer({ storage: storage });
+const upload = multer({
+  storage: multer.memoryStorage()
+});
 
 AWS.config.update({ region: 'us-east-1' });
 
 const dynamoDb = new AWS.DynamoDB.DocumentClient();
 const tableName = 'G7Cars';
+const s3 = new AWS.S3();
 
 app.use(cors());
 app.use(express.json());
-
-app.get('/cars', async (req, res) => {
-  try {
-    const params = {
-      TableName: tableName,
-    };
-
-    const data = await dynamoDb.scan(params).promise();
-    res.json(data.Items);
-  } catch (error) {
-    console.error('Unable to fetch data', error);
-    res.status(500).send('Unable to fetch data from DynamoDB');
-  }
-});
-
-app.delete('/cars/:id', async (req, res) => {
-  try {
-    const params = {
-      TableName: tableName,
-      Key: {
-        id: req.params.id,
-      },
-    };
-
-    await dynamoDb.delete(params).promise();
-    res.json({ message: 'Data deleted from DynamoDB' });
-  } catch (error) {
-    console.error('Error deleting product', error);
-    res.status(500).send('Unable to delete data from DynamoDB');
-  }
-});
 
 app.post('/cars', upload.fields([
   { name: 'Coverimage', maxCount: 1 },
@@ -69,8 +40,17 @@ app.post('/cars', upload.fields([
     for (const field of imageFields) {
       if (req.files[field] && req.files[field].length > 0) {
         const images = req.files[field]; 
-        const base64Images = images.map(image => image.buffer.toString('base64'));
-        item[field] = base64Images;
+        const imageUrls = [];
+        for (const image of images) {
+          const params = {
+            Bucket: 'g7cars',
+            Key: image.originalname,
+            Body: image.buffer
+          };
+          const data = await s3.upload(params).promise();
+          imageUrls.push(data.Location);
+        }
+        item[field] = imageUrls;
       }
     }
 
@@ -80,46 +60,42 @@ app.post('/cars', upload.fields([
     };
 
     await dynamoDb.put(params).promise();
-    res.status(200).send('Uploaded data successfully');
+    res.status(200).send('Uploaded data and images successfully');
   } catch (error) {
     console.error('Unable to post details', error);
     res.status(500).send('Unable to post details to DynamoDB');
   }
 });
 
-app.put('/cars/:id', async (req, res) => {
+app.get('/cars/:id', async (req, res) => {
   try {
-    const updateExpressions = [];
-    const expressionAttributeNames = {};
-    const expressionAttributeValues = {};
-
-    for (const [key, value] of Object.entries(req.body)) {
-      updateExpressions.push(`#${key} = :${key}`);
-      expressionAttributeNames[`#${key}`] = key;
-      expressionAttributeValues[`:${key}`] = value;
-    }
-
     const params = {
       TableName: tableName,
       Key: {
-        id: req.params.id,
-      },
-      UpdateExpression: `set ${updateExpressions.join(', ')}`,
-      ExpressionAttributeNames: expressionAttributeNames,
-      ExpressionAttributeValues: expressionAttributeValues,
-      ReturnValues: 'UPDATED_NEW'
+        id: req.params.id
+      }
+    };
+    const data = await dynamoDb.get(params).promise();
+    if (!data.Item) {
+      res.status(404).send('Car not found');
+      return;
+    }
+
+    const coverImageUrl = data.Item.coverImageUrl;
+    if (!coverImageUrl) {
+      res.status(404).send('Cover image not found');
+      return;
+    }
+
+    const responseData = {
+      ...data.Item,
+      coverImageUrl: coverImageUrl
     };
 
-    const result = await dynamoDb.update(params).promise();
-
-    if (result.Attributes) {
-      res.status(200).send('Car details updated successfully');
-    } else {
-      res.status(404).send('Car not found or no changes made');
-    }
+    res.status(200).json(responseData);
   } catch (error) {
-    console.error('Unable to update car details', error);
-    res.status(500).send('Unable to update car details in DynamoDB');
+    console.error('Error retrieving car data:', error);
+    res.status(500).send('Unable to retrieve car data');
   }
 });
 
