@@ -44,17 +44,7 @@ app.delete('/cars/:id', async (req, res) => {
   }
 });
 
-app.post('/cars', upload.fields([
-  { name: 'Coverimage', maxCount: 1 },
-  { name: 'RcFront', maxCount: 1 },
-  { name: 'RcBack', maxCount: 1 },
-  { name: 'AdhaarFront', maxCount: 1 },
-  { name: 'AdhaarBack', maxCount: 1 },
-  { name: 'Insurance', maxCount: 1 },
-  { name: 'Pollution', maxCount: 1 },
-  { name: 'Images', maxCount: 30 },
-  { name: 'AgreementDoc', maxCount: 1 }
-]), async (req, res) => {
+app.post('/cars', async (req, res) => {
   try {
     const item = {
       id: uuidv4(),
@@ -64,9 +54,9 @@ app.post('/cars', upload.fields([
     const imageFields = ['Coverimage', 'RcFront', 'RcBack', 'AdhaarFront', 'AdhaarBack', 'Insurance', 'Pollution', 'AgreementDoc'];
     for (const field of imageFields) {
       if (req.files[field] && req.files[field].length > 0) {
-        const images = req.files[field]; 
-        const imageBuffers = images.map(image => image.buffer);
-        item[field] = imageBuffers;
+        const images = req.files[field]; // Get array of image files for this field
+        const imageBuffers = images.map(image => image.buffer); // Get array of image buffers
+        item[field] = imageBuffers; // Store image buffers in the item object
       }
     }
 
@@ -82,6 +72,7 @@ app.post('/cars', upload.fields([
     res.status(500).send('Unable to post details to DynamoDB');
   }
 });
+
 
 
 app.put('/cars/:id', async (req, res) => {
