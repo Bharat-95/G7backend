@@ -32,7 +32,7 @@ app.post('/cars', upload.fields([
 ]), async (req, res) => {
   try {
     const item = {
-      G7cars123: uuidv4(),
+      id: uuidv4(),
       ...req.body
     };
 
@@ -67,7 +67,7 @@ app.post('/cars', upload.fields([
   }
 });
 
-app.get('/cars', async (req, res) => {
+app.get('/cars/:id', async (req, res) => {
   try {
     const params = {
       TableName: tableName,
@@ -81,21 +81,55 @@ app.get('/cars', async (req, res) => {
       return;
     }
 
-    const coverImageUrl = data.Item.coverImageUrl;
-    if (!coverImageUrl) {
-      res.status(404).send('Cover image not found');
-      return;
-    }
-
     const responseData = {
-      ...data.Item,
-      coverImageUrl: coverImageUrl
+      ...data.Item
     };
 
     res.status(200).json(responseData);
   } catch (error) {
     console.error('Error retrieving car data:', error);
     res.status(500).send('Unable to retrieve car data');
+  }
+});
+
+app.put('/cars/:id', async (req, res) => {
+  try {
+    const params = {
+      TableName: tableName,
+      Key: {
+        id: req.params.id
+      },
+      UpdateExpression: 'set #attr1 = :val1',
+      ExpressionAttributeNames: {
+        '#attr1': 'exampleAttribute' 
+      },
+      ExpressionAttributeValues: {
+        ':val1': req.body.exampleAttribute // Replace 'exampleAttribute' with the attribute value you want to update
+      },
+      ReturnValues: 'ALL_NEW'
+    };
+
+    const data = await dynamoDb.update(params).promise();
+    res.status(200).json(data.Attributes);
+  } catch (error) {
+    console.error('Error updating car data:', error);
+    res.status(500).send('Unable to update car data');
+  }
+});
+
+app.delete('/cars/:id', async (req, res) => {
+  try {
+    const params = {
+      TableName: tableName,
+      Key: {
+        id: req.params.id
+      }
+    };
+    await dynamoDb.delete(params).promise();
+    res.status(200).send('Car deleted successfully');
+  } catch (error) {
+    console.error('Error deleting car data:', error);
+    res.status(500).send('Unable to delete car data');
   }
 });
 
