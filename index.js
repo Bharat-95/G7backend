@@ -67,7 +67,7 @@ app.post('/cars', upload.fields([
   }
 });
 
-app.get('/cars/:id', async (req, res) => {
+app.get('/cars', async (req, res) => {
   try {
     const params = {
       TableName: tableName,
