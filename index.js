@@ -2,13 +2,10 @@ const express = require('express');
 const app = express();
 const port = process.env.PORT || 4000;
 const { MongoClient, ObjectId } = require('mongodb');
-const AWS = require('aws-sdk');
+
 const cors = require('cors');
 const multer = require('multer');
 
-const s3 = new AWS.S3({
-  region: 'us-east-1',
-});
 
 const url = 'mongodb+srv://g7selfdrivecars:G7cars123@cluster0.77lf8cj.mongodb.net/G7Cars?retryWrites=true&w=majority';
 
@@ -67,30 +64,23 @@ async function run() {
       try {
         const db = client.db('G7Cars');
         const collection = db.collection('Cars');
-
+    
         const insert = req.body;
-
-        const promises = [];
-        for (const fieldName of Object.keys(req.files)) {
-          const file = req.files[fieldName][0];
-          const params = {
-            Bucket: 'g7backend',
-            Key: `${fieldName}/${file.originalname}`,
-            Body: file.buffer,
-          };
-          promises.push(s3.upload(params).promise());
+        const files = req.files;
+    
+        for (const fieldName of Object.keys(files)) {
+          const file = files[fieldName][0];
+          insert[fieldName] = new mongodb.Binary(file.buffer);
         }
-
-        await Promise.all(promises);
-
         await collection.insertOne(insert);
-
+    
         res.status(200).send('Uploaded data successfully');
       } catch (error) {
         console.error('Unable to post details', error);
         res.status(500).send('Unable to post details to MongoDB');
       }
     });
+    
 
     app.put('/cars/:id', async (req, res) => {
       try {
