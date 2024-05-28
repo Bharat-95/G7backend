@@ -4,10 +4,9 @@ const port = process.env.PORT || 4000;
 const AWS = require('aws-sdk');
 const cors = require('cors');
 const { v4: uuidv4 } = require('uuid');
-const multer = require('multer'); 
+const multer = require('multer');
 
 const storage = multer.memoryStorage();
-
 const upload = multer({ storage: storage });
 
 AWS.config.update({ region: 'us-east-1' });
@@ -49,8 +48,6 @@ app.delete('/cars/:id', async (req, res) => {
   }
 });
 
-
-
 app.post('/cars', upload.fields([
   { name: 'Coverimage', maxCount: 1 },
   { name: 'RcFront', maxCount: 1 },
@@ -59,12 +56,12 @@ app.post('/cars', upload.fields([
   { name: 'AdhaarBack', maxCount: 1 },
   { name: 'Insurance', maxCount: 1 },
   { name: 'Pollution', maxCount: 1 },
-  { name: 'Images', maxCount: 30 },
+  { name: 'Images', maxCount: 50 },
   { name: 'AgreementDoc', maxCount: 1 }
 ]), async (req, res) => {
   try {
     const item = {
-      G7cars123: uuidv4(),
+      id: uuidv4(),
       ...req.body
     };
 
@@ -72,8 +69,8 @@ app.post('/cars', upload.fields([
     for (const field of imageFields) {
       if (req.files[field] && req.files[field].length > 0) {
         const images = req.files[field]; 
-        const imageBuffers = images.map(image => image.buffer);
-        item[field] = imageBuffers;
+        const base64Images = images.map(image => image.buffer.toString('base64'));
+        item[field] = base64Images;
       }
     }
 
@@ -89,8 +86,6 @@ app.post('/cars', upload.fields([
     res.status(500).send('Unable to post details to DynamoDB');
   }
 });
-
-
 
 app.put('/cars/:id', async (req, res) => {
   try {
