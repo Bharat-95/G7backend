@@ -1,13 +1,9 @@
-const { MongoClient, ObjectId } = require('mongodb');
-const express = require('express');
-const serverless = require('serverless-http');
-const multer = require('multer');
-const cors = require('cors');
-const jwt = require('jsonwebtoken');
-const AWS = require('aws-sdk');
-const fs = require('fs');
-const port = process.env.PORT || 4000;
-const app = express();
+const express = require('express')
+const app = express()
+const port = process.env.PORT || 4000
+const {MongoClient, ObjectId} = require('mongodb')
+const cors = require('cors')
+const multer = require('multer')
 
 const s3 = new AWS.S3({
   region: 'us-east-1',
@@ -24,22 +20,21 @@ const storage = multer.memoryStorage();
 
 const upload = multer({ storage: storage });
 
-async function connectToMongoDB() {
-  if (!client) {
-    client = new MongoClient(url, { useNewUrlParser: true, useUnifiedTopology: true });
-    await client.connect();
-    console.log('Connected to MongoDB');
-  }
-  return client.db('G7Cars');
-}
+async function run() {
 
-app.get('/', (req, res) => {
-  res.send('Backend server');
-});
-
-app.get('/cars', async (req, res) => {
   try {
-    const db = await connectToMongoDB();
+
+    await client.connect();
+
+    
+
+    app.get('/', (req, res) => {
+      res.send('Hello World!')
+    })
+
+     app.get('/cars', async (req, res) => {
+    try {
+    const db = client.db('G7Cars')
     const collection = db.collection('Cars');
     const data = await collection.find({}).toArray();
     res.json(data);
@@ -51,7 +46,7 @@ app.get('/cars', async (req, res) => {
 
 app.delete('/cars/:id', async (req, res) => {
   try {
-    const db = await connectToMongoDB();
+    const db = client.db('G7Cars')
     const collection = db.collection('Cars');
     const id = req.params.id;
     await collection.deleteOne({ _id: new ObjectId(id) });
@@ -74,7 +69,7 @@ app.post('/cars', upload.fields([
   { name: 'AgreementDoc', maxCount: 1 }
 ]), async (req, res) => {
   try {
-    const db = await connectToMongoDB();
+    const db = client.db('Lingeshwara');
     const collection = db.collection('Cars');
 
     const insert = req.body;
@@ -103,7 +98,7 @@ app.post('/cars', upload.fields([
 
 app.put('/cars/:id', async (req, res) => {
   try {
-    const db = await connectToMongoDB();
+    const db = client.db('Lingeshwara');
     const collection = db.collection('Cars');
     const id = req.params.id;
     const updateData = req.body;
@@ -122,10 +117,27 @@ app.put('/cars/:id', async (req, res) => {
     console.error('Unable to update car details', error);
     res.status(500).send('Unable to update car details in MongoDB');
   }
-});
 
+}
+    
+)
+
+
+
+
+
+
+
+app.listen(port, () => {
+  console.log(`Example app listening on port ${port}`)
+})
+
+} catch (error) {
+
+console.error('unable to connect', error);
+
+}
+}
 
 app.listen(port);
-module.exports = app;
-
-module.exports.handler = serverless(app);
+run();
