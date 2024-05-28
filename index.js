@@ -18,8 +18,8 @@ app.use(express.json());
 
 const storage = multerS3({
   s3: s3,
-  bucket: 'g7backend',
-  acl: 'public-read',  // Add ACL to make the files publicly readable
+  bucket: 'g7cars',
+  acl: 'public-read', 
   metadata: (req, file, cb) => {
     cb(null, { fieldName: file.fieldname });
   },
