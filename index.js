@@ -7,7 +7,6 @@ const multer = require('multer');
 const multerS3 = require('multer-s3');
 const { v4: uuidv4 } = require('uuid');
 
-
 AWS.config.update({ region: 'us-east-1' });
 
 const s3 = new AWS.S3();
@@ -17,20 +16,20 @@ const tableName = 'G7Cars';
 app.use(cors());
 app.use(express.json());
 
-
 const storage = multerS3({
   s3: s3,
   bucket: 'g7backend',
+  acl: 'public-read',  // Add ACL to make the files publicly readable
   metadata: (req, file, cb) => {
     cb(null, { fieldName: file.fieldname });
   },
   key: (req, file, cb) => {
     cb(null, `${uuidv4()}_${file.originalname}`);
-  }
+  },
+  contentType: multerS3.AUTO_CONTENT_TYPE // Set content type automatically
 });
 
 const upload = multer({ storage: storage });
-
 
 app.get('/cars', async (req, res) => {
   try {
@@ -45,7 +44,6 @@ app.get('/cars', async (req, res) => {
     res.status(500).send('Unable to fetch data from DynamoDB');
   }
 });
-
 
 app.delete('/cars/:id', async (req, res) => {
   try {
@@ -63,7 +61,6 @@ app.delete('/cars/:id', async (req, res) => {
     res.status(500).send('Unable to delete data from DynamoDB');
   }
 });
-
 
 app.post('/cars', upload.fields([
   { name: 'Coverimage', maxCount: 1 },
@@ -100,21 +97,26 @@ app.post('/cars', upload.fields([
   }
 });
 
-// Route to update car details in DynamoDB
 app.put('/cars/:id', async (req, res) => {
   try {
+    const updateExpressions = [];
+    const expressionAttributeNames = {};
+    const expressionAttributeValues = {};
+
+    for (const [key, value] of Object.entries(req.body)) {
+      updateExpressions.push(`#${key} = :${key}`);
+      expressionAttributeNames[`#${key}`] = key;
+      expressionAttributeValues[`:${key}`] = value;
+    }
+
     const params = {
       TableName: tableName,
       Key: {
         id: req.params.id,
       },
-      UpdateExpression: 'set #attrName = :attrValue',
-      ExpressionAttributeNames: {
-        '#attrName': Object.keys(req.body)[0]
-      },
-      ExpressionAttributeValues: {
-        ':attrValue': Object.values(req.body)[0]
-      },
+      UpdateExpression: `set ${updateExpressions.join(', ')}`,
+      ExpressionAttributeNames: expressionAttributeNames,
+      ExpressionAttributeValues: expressionAttributeValues,
       ReturnValues: 'UPDATED_NEW'
     };
 
@@ -130,7 +132,6 @@ app.put('/cars/:id', async (req, res) => {
     res.status(500).send('Unable to update car details in DynamoDB');
   }
 });
-
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
