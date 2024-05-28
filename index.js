@@ -1,14 +1,12 @@
 const { MongoClient, ObjectId } = require('mongodb');
 const express = require('express');
 const serverless = require('serverless-http');
-const bcrypt = require('bcryptjs');
 const multer = require('multer');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const AWS = require('aws-sdk');
 const fs = require('fs');
-const PORT = 4000;
-
+const port = process.env.PORT || 4000;
 const app = express();
 
 const s3 = new AWS.S3({
@@ -23,6 +21,7 @@ app.use(cors());
 app.use(express.json());
 
 const storage = multer.memoryStorage();
+
 const upload = multer({ storage: storage });
 
 async function connectToMongoDB() {
@@ -126,7 +125,7 @@ app.put('/cars/:id', async (req, res) => {
 });
 
 
-app.listen(PORT);
+app.listen(port);
 module.exports = app;
 
 module.exports.handler = serverless(app);
