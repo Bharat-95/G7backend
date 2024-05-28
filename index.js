@@ -2,6 +2,7 @@ const express = require('express')
 const app = express()
 const port = process.env.PORT || 4000
 const {MongoClient, ObjectId} = require('mongodb')
+const AWS = require('aws-sdk');
 const cors = require('cors')
 const multer = require('multer')
 
