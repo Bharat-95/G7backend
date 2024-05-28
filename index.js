@@ -32,7 +32,7 @@ app.post('/cars', upload.fields([
 ]), async (req, res) => {
   try {
     const item = {
-      G7cars123: uuidv4(),
+      id: uuidv4(),
       ...req.body
     };
 
@@ -73,12 +73,7 @@ app.get('/cars', async (req, res) => {
       TableName: tableName,
     };
     const data = await dynamoDb.scan(params).promise();
-    // Fetch image URLs from S3 for each car
-    const carsWithImages = await Promise.all(data.Items.map(async (car) => {
-      const images = await fetchImagesFromS3(car);
-      return { ...car, images };
-    }));
-    res.json(carsWithImages);
+    res.json(data.Items);
   } catch (error) {
     console.error('Error fetching data from DynamoDB:', error);
     res.status(500).send('Unable to fetch data from DynamoDB');
