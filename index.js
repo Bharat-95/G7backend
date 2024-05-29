@@ -107,11 +107,12 @@ app.put('/cars/:id', async (req, res) => {
 
 app.delete('/cars/:id', async (req, res) => {
   const carId = req.params.id;
-  
+  console.log('Attempting to delete car with ID:', carId); // Add this line
+
   const params = {
     TableName: tableName,
     Key: {
-      G7cars123: carId 
+      G7cars123: carId
     },
     ConditionExpression: 'attribute_exists(G7cars123)'
   };
@@ -120,8 +121,7 @@ app.delete('/cars/:id', async (req, res) => {
     await dynamoDb.delete(params).promise();
     res.status(200).send('Car deleted successfully');
   } catch (error) {
-    console.error('Error deleting car data:', error);
-
+    console.error('Error deleting car data:', error.message, 'Details:', error);
     if (error.code === 'ConditionalCheckFailedException') {
       res.status(404).send('Car not found');
     } else {
