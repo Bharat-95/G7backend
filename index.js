@@ -107,7 +107,7 @@ app.put('/cars/:id', async (req, res) => {
 
 app.delete('/cars/:id', async (req, res) => {
   const carId = req.params.id;
-  console.log('Attempting to delete car with ID:', carId); // Add this line
+  console.log('Attempting to delete car with ID:', carId);
 
   const params = {
     TableName: tableName,
@@ -129,7 +129,6 @@ app.delete('/cars/:id', async (req, res) => {
     }
   }
 });
-
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
