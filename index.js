@@ -108,7 +108,6 @@ app.put('/cars/:id', async (req, res) => {
 
 app.delete('/cars/:carNo', async (req, res) => {
   const carNo = req.params.carNo;
-  console.log('Attempting to delete car with CarNo:', carNo);
 
   const params = {
     TableName: tableName,
