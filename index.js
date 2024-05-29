@@ -80,12 +80,14 @@ app.get('/cars', async (req, res) => {
   }
 });
 
-app.put('/cars/:id', async (req, res) => {
+app.put('/cars/:carNo', async (req, res) => {
+  const carNo = req.params.carNo;
+
   try {
     const params = {
       TableName: tableName,
       Key: {
-        id: req.params.id
+        carNo: carNo 
       },
       UpdateExpression: 'set #attr1 = :val1',
       ExpressionAttributeNames: {
@@ -106,19 +108,45 @@ app.put('/cars/:id', async (req, res) => {
 });
 
 
+
 app.delete('/cars/:carNo', async (req, res) => {
   const carNo = req.params.carNo;
 
   const params = {
     TableName: tableName,
     Key: {
-      G7cars123: carNo 
+      G7cars123: carNo
     },
     ConditionExpression: 'attribute_exists(G7cars123)'
   };
 
   try {
+    
+    const carDetails = await dynamoDb.get(params).promise();
+    const carData = carDetails.Item;
+
+
+    const imageUrls = [];
+    for (const key in carData) {
+      if (key.endsWith('Back') || key.endsWith('Front') || key === 'Coverimage' || key === 'Insurance' || key === 'AdhaarBack' || key === 'AdhaarFront' || key === 'RcBack' || key === 'RcFront') {
+        const imageAttribute = carData[key];
+        if (imageAttribute && imageAttribute.L && imageAttribute.L.length > 0) {
+          imageAttribute.L.forEach(image => {
+            imageUrls.push(image.S);
+          });
+        }
+      }
+    }
+
+    
     await dynamoDb.delete(params).promise();
+
+  
+    await Promise.all(imageUrls.map(async (imageUrl) => {
+      const imageKey = getImageKeyFromUrl(imageUrl);
+      await s3.deleteObject({ Bucket: 'g7cars', Key: imageKey }).promise();
+    }));
+
     res.status(200).send('Car deleted successfully');
   } catch (error) {
     console.error('Error deleting car data:', error.message, 'Details:', error);
@@ -129,6 +157,12 @@ app.delete('/cars/:carNo', async (req, res) => {
     }
   }
 });
+
+function getImageKeyFromUrl(imageUrl) {
+  const parts = imageUrl.split('/');
+  return parts[parts.length - 1];
+}
+
 
 
 
