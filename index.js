@@ -92,7 +92,7 @@ app.put('/cars/:id', async (req, res) => {
         '#attr1': 'exampleAttribute' 
       },
       ExpressionAttributeValues: {
-        ':val1': req.body.exampleAttribute // Replace 'exampleAttribute' with the attribute value you want to update
+        ':val1': req.body.exampleAttribute 
       },
       ReturnValues: 'ALL_NEW'
     };
@@ -106,20 +106,30 @@ app.put('/cars/:id', async (req, res) => {
 });
 
 app.delete('/cars/:id', async (req, res) => {
+  const carId = req.params.id;
+  
+  const params = {
+    TableName: tableName,
+    Key: {
+      G7cars123: carId 
+    },
+    ConditionExpression: 'attribute_exists(G7cars123)'
+  };
+
   try {
-    const params = {
-      TableName: tableName,
-      Key: {
-        id: req.params.id
-      }
-    };
     await dynamoDb.delete(params).promise();
     res.status(200).send('Car deleted successfully');
   } catch (error) {
     console.error('Error deleting car data:', error);
-    res.status(500).send('Unable to delete car data');
+
+    if (error.code === 'ConditionalCheckFailedException') {
+      res.status(404).send('Car not found');
+    } else {
+      res.status(500).send('Unable to delete car data');
+    }
   }
 });
+
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
