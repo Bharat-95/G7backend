@@ -106,16 +106,16 @@ app.put('/cars/:id', async (req, res) => {
 });
 
 
-app.delete('/cars/:id', async (req, res) => {
-  const carId = req.params.id;
-  console.log('Attempting to delete car with ID:', carId);
+app.delete('/cars/:carNo', async (req, res) => {
+  const carNo = req.params.carNo;
+  console.log('Attempting to delete car with CarNo:', carNo);
 
   const params = {
     TableName: tableName,
     Key: {
-      G7cars123: carId
+      CarNo: carNo 
     },
-    ConditionExpression: 'attribute_exists(G7cars123)'
+    ConditionExpression: 'attribute_exists(CarNo)'
   };
 
   try {
