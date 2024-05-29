@@ -107,15 +107,15 @@ app.put('/cars/:id', async (req, res) => {
 
 
 app.delete('/cars/:carNo', async (req, res) => {
-  const carNo = req.params.carNo; // Using lowercase 'carNo'
+  const carNo = req.params.carNo;
   console.log('Attempting to delete car with CarNo:', carNo);
 
   const params = {
     TableName: tableName,
     Key: {
-      CarNo: carNo
+      G7cars123: carNo 
     },
-    ConditionExpression: 'attribute_exists(CarNo)'
+    ConditionExpression: 'attribute_exists(G7cars123)'
   };
 
   try {
@@ -130,6 +130,7 @@ app.delete('/cars/:carNo', async (req, res) => {
     }
   }
 });
+
 
 
 
