@@ -76,13 +76,12 @@ app.post('/bookings', async (req, res) => {
   try {
     const { carId, pickupDateTime, dropoffDateTime } = req.body;
 
-    // Update car availability status to false
     const updateParams = {
-      TableName: 'G7Cars', // Assuming your table name is 'G7Cars'
-      Key: { 'G7cars123': carId }, // Assuming 'G7cars123' is the primary key
+      TableName: 'Bookings', // Assuming your table name is 'G7Cars'
+      Key: { 'G7cars123': carNo },
       UpdateExpression: 'set #avail = :avail',
       ExpressionAttributeNames: {
-        '#avail': 'available' // 'available' is the attribute to store availability status
+        '#avail': 'available' 
       },
       ExpressionAttributeValues: {
         ':avail': false
