@@ -79,7 +79,7 @@ app.post('/bookings', async (req, res) => {
 
     const updateParams = {
       TableName: 'Bookings', 
-      Key: { carNo: carNo },
+      Key: { 'G7cars123': carId },
       UpdateExpression: 'set #avail = :avail',
       ExpressionAttributeNames: {
         '#avail': 'available' 
