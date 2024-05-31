@@ -72,11 +72,9 @@ app.post('/cars', upload.fields([
 });
 
 app.post('/bookings', async (req, res) => {
-  const carNo = req.params.carNo;
   const dynamoDb = new AWS.DynamoDB.DocumentClient();
   try {
     const { carId, pickupDateTime, dropoffDateTime } = req.body;
-
     const updateParams = {
       TableName: 'Bookings', 
       Key: { 'G7cars123': carId },
@@ -92,11 +90,10 @@ app.post('/bookings', async (req, res) => {
 
     await dynamoDb.update(updateParams).promise();
 
-    
     const bookingParams = {
       TableName: 'Bookings',
       Item: {
-        carNo: carNo, 
+        carId,
         pickupDateTime,
         dropoffDateTime,
         createdAt: Date.now(),
