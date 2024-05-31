@@ -74,10 +74,10 @@ app.post('/cars', upload.fields([
 app.post('/bookings', async (req, res) => {
   const dynamoDb = new AWS.DynamoDB.DocumentClient();
   try {
-    const { carId, pickupDateTime, dropoffDateTime } = req.body;
+    const { carNo, pickupDateTime, dropoffDateTime } = req.body;
 
     const updateParams = {
-      TableName: 'Bookings', // Assuming your table name is 'G7Cars'
+      TableName: 'Bookings',
       Key: { 'G7cars123': carNo },
       UpdateExpression: 'set #avail = :avail',
       ExpressionAttributeNames: {
