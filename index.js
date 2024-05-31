@@ -72,14 +72,15 @@ app.post('/cars', upload.fields([
 });
 
 app.post('/bookings', async (req, res) => {
-  const dynamoDb = new AWS.DynamoDB.DocumentClient();
   try {
+    const dynamoDb = new AWS.DynamoDB.DocumentClient();
     const { carId, pickupDateTime, dropoffDateTime } = req.body;
-    
+    const bookingId = uuidv4();
 
     const params = {
       TableName: 'Bookings',
       Item: {
+        G7cars123: bookingId,
         carId,
         pickupDateTime,
         dropoffDateTime,
@@ -94,6 +95,7 @@ app.post('/bookings', async (req, res) => {
     res.status(500).json({ message: 'Failed to book the car' });
   }
 });
+
 
 
 app.get('/cars', async (req, res) => {
