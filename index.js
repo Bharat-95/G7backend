@@ -72,22 +72,37 @@ app.post('/cars', upload.fields([
 });
 
 app.post('/bookings', async (req, res) => {
+  const dynamoDb = new AWS.DynamoDB.DocumentClient();
   try {
-    const dynamoDb = new AWS.DynamoDB.DocumentClient();
     const { carId, pickupDateTime, dropoffDateTime } = req.body;
-    const bookingId = uuidv4();
 
-    const params = {
+    // Update car availability status to false
+    const updateParams = {
+      TableName: 'G7Cars', // Assuming your table name is 'G7Cars'
+      Key: { 'G7cars123': carId }, // Assuming 'G7cars123' is the primary key
+      UpdateExpression: 'set #avail = :avail',
+      ExpressionAttributeNames: {
+        '#avail': 'available' // 'available' is the attribute to store availability status
+      },
+      ExpressionAttributeValues: {
+        ':avail': false
+      },
+      ReturnValues: 'ALL_NEW'
+    };
+
+    await dynamoDb.update(updateParams).promise();
+
+    // Save booking details
+    const bookingParams = {
       TableName: 'Bookings',
       Item: {
-        G7cars123: bookingId,
         carId,
         pickupDateTime,
         dropoffDateTime,
         createdAt: Date.now(),
       },
     };
-    await dynamoDb.put(params).promise();
+    await dynamoDb.put(bookingParams).promise();
 
     res.status(200).json({ message: 'Booking successful' });
   } catch (error) {
@@ -95,6 +110,7 @@ app.post('/bookings', async (req, res) => {
     res.status(500).json({ message: 'Failed to book the car' });
   }
 });
+
 
 
 
