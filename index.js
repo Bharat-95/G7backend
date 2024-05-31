@@ -86,7 +86,7 @@ app.post('/bookings', async (req, res) => {
         createdAt: Date.now(),
       },
     };
-    await dynamoDB.put(params).promise();
+    await dynamoDb.put(params).promise();
 
     res.status(200).json({ message: 'Booking successful' });
   } catch (error) {
