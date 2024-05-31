@@ -75,7 +75,7 @@ app.post('/bookings', async (req, res) => {
   const carNo = req.params.carNo;
   const dynamoDb = new AWS.DynamoDB.DocumentClient();
   try {
-    const { carNo, pickupDateTime, dropoffDateTime } = req.body;
+    const { carId, pickupDateTime, dropoffDateTime } = req.body;
 
     const updateParams = {
       TableName: 'Bookings', 
