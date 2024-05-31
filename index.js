@@ -6,6 +6,10 @@ const cors = require('cors');
 const { v4: uuidv4 } = require('uuid');
 const multer = require('multer');
 
+
+
+
+
 const upload = multer({
   storage: multer.memoryStorage()
 });
@@ -67,6 +71,29 @@ app.post('/cars', upload.fields([
   }
 });
 
+app.post('/bookings', async (req, res) => {
+  try {
+    const { carId, pickupDateTime, dropoffDateTime } = req.body;
+
+    const params = {
+      TableName: 'Bookings',
+      Item: {
+        carId,
+        pickupDateTime,
+        dropoffDateTime,
+        createdAt: Date.now(),
+      },
+    };
+    await dynamoDB.put(params).promise();
+
+    res.status(200).json({ message: 'Booking successful' });
+  } catch (error) {
+    console.error('Error while booking:', error);
+    res.status(500).json({ message: 'Failed to book the car' });
+  }
+});
+
+
 app.get('/cars', async (req, res) => {
   try {
     const params = {
@@ -79,6 +106,8 @@ app.get('/cars', async (req, res) => {
     res.status(500).send('Unable to fetch data from DynamoDB');
   }
 });
+
+
 
 app.put('/cars/:carNo', async (req, res) => {
   const carNo = req.params.carNo;
