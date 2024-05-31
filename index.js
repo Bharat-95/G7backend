@@ -72,8 +72,10 @@ app.post('/cars', upload.fields([
 });
 
 app.post('/bookings', async (req, res) => {
+  const dynamoDb = new AWS.DynamoDB.DocumentClient();
   try {
     const { carId, pickupDateTime, dropoffDateTime } = req.body;
+    
 
     const params = {
       TableName: 'Bookings',
