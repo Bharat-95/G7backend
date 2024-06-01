@@ -5,6 +5,8 @@ const AWS = require('aws-sdk');
 const cors = require('cors');
 const { v4: uuidv4 } = require('uuid');
 const multer = require('multer');
+const crypto = require('crypto');
+require('dotenv').config()
 
 
 
@@ -76,13 +78,12 @@ app.post('/bookings', async (req, res) => {
     const dynamoDb = new AWS.DynamoDB.DocumentClient();
     const { carId, pickupDateTime, dropoffDateTime } = req.body;
     
-    // Generate a unique ID for the booking
     const bookingId = uuidv4();
 
     const params = {
       TableName: 'Bookings',
       Item: {
-        G7cars123: bookingId, // Include the unique ID
+        G7cars123: bookingId, 
         carId,
         pickupDateTime,
         dropoffDateTime,
@@ -98,6 +99,75 @@ app.post('/bookings', async (req, res) => {
   }
 });
 
+let rzp = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_SECRET_KEY
+});
+
+
+app.post('/order', (req, res) => {
+  var options = {
+    amount: req.body.amount, 
+    currency: "INR",
+    receipt: "order_rcptid_11"
+  };
+  rzp.orders.create(options, function(err, order) {
+    if(err) {
+      res.status(500).json({
+        message: "Order creation failed",
+        error: err
+      });
+    } else {
+      res.status(200).json(order);
+    }
+  });
+});
+
+app.post('/verify-payment', (req, res) => {
+  const { 
+    'payment[razorpay_order_id]': orderId,
+    'payment[razorpay_payment_id]': paymentId,
+    'payment[razorpay_signature]': signature,
+  } = req.body;
+
+  const generatedSignature = crypto
+    .createHmac('sha256', process.env.RAZORPAY_SECRET_KEY)
+    .update(`${orderId}|${paymentId}`)
+    .digest('hex');
+
+  if (generatedSignature === signature) {
+    res.status(200).json({ status: 'success' });
+  } else {
+    res.status(400).json({ status: 'failure' });
+  }
+});
+
+app.post('/payment-history', async (req, res) => {
+  try {
+    const { customerName, carNo, paymentDate, amount, paymentMethod } = req.body;
+    
+    const paymentId = uuidv4();
+
+    const params = {
+      TableName: 'PaymentHistory',
+      Item: {
+        paymentId: paymentId, 
+        customerName,
+        carNo,
+        paymentDate,
+        amount,
+        paymentMethod,
+        createdAt: Date.now(),
+      },
+    };
+    await dynamoDb.put(params).promise();
+
+    res.status(200).json({ message: 'Payment history recorded successfully' });
+  } catch (error) {
+    console.error('Error while recording payment history:', error);
+    res.status(500).json({ message: 'Failed to record payment history' });
+  }
+});
 
 
 
