@@ -6,7 +6,9 @@ const cors = require('cors');
 const { v4: uuidv4 } = require('uuid');
 const multer = require('multer');
 const crypto = require('crypto');
+const Razorpay = require('razorpay');
 require('dotenv').config()
+
 
 
 
