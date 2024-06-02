@@ -128,28 +128,33 @@ app.post('/order', (req, res) => {
 
 
 
-function generateSignature(orderId, paymentId) {
-
-  return orderId + paymentId; 
-}
 
 app.post('/verify-payment', (req, res) => {
-  const { orderId, paymentId, signature } = req.body;
 
-  console.log('Received verification request:', { orderId, paymentId, signature });
 
-  const generatedSignature = generateSignature(orderId, paymentId);
+const data = crypto.createHmac('sha256', process.env.RAZORPAY_SECRET_KEY)
 
-  const verificationSucceeded = generatedSignature === signature;
+  data.update(JSON.stringify(req.body))
 
-  if (verificationSucceeded) {
-    console.log('Payment verification succeeded');
-    res.status(200).json({ status: 'success' });
-  } else {
-    console.log('Payment verification failed');
-    res.status(400).json({ status: 'failure' });
+  const digest = data.digest('hex')
+
+if (digest === req.headers['x-razorpay-signature']) {
+
+      console.log('request is legit')
+
+      res.json({
+
+          status: 'ok'
+
+      })
+
+} else {
+
+      res.status(400).send('Invalid signature');
+
   }
-});
+
+})
 
 
 
