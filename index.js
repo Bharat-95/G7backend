@@ -108,13 +108,17 @@ let rzp = new Razorpay({
 
 
 app.post('/order', (req, res) => {
-  var options = {
-    amount: req.body.amount, 
+  const { amount } = req.body;
+
+  const options = {
+    amount: amount * 100, // amount in smallest currency unit (paise)
     currency: "INR",
-    receipt: "order_rcptid_11"
+    receipt: `order_rcptid_${uuidv4()}`,
   };
+
   rzp.orders.create(options, function(err, order) {
-    if(err) {
+    if (err) {
+      console.error("Error creating order:", err);
       res.status(500).json({
         message: "Order creation failed",
         error: err
@@ -126,11 +130,7 @@ app.post('/order', (req, res) => {
 });
 
 app.post('/verify-payment', (req, res) => {
-  const { 
-    'payment[razorpay_order_id]': orderId,
-    'payment[razorpay_payment_id]': paymentId,
-    'payment[razorpay_signature]': signature,
-  } = req.body;
+  const { orderId, paymentId, signature } = req.body;
 
   const generatedSignature = crypto
     .createHmac('sha256', process.env.RAZORPAY_SECRET_KEY)
@@ -141,33 +141,6 @@ app.post('/verify-payment', (req, res) => {
     res.status(200).json({ status: 'success' });
   } else {
     res.status(400).json({ status: 'failure' });
-  }
-});
-
-app.post('/payment-history', async (req, res) => {
-  try {
-    const { customerName, carNo, paymentDate, amount, paymentMethod } = req.body;
-    
-    const paymentId = uuidv4();
-
-    const params = {
-      TableName: 'PaymentHistory',
-      Item: {
-        paymentId: paymentId, 
-        customerName,
-        carNo,
-        paymentDate,
-        amount,
-        paymentMethod,
-        createdAt: Date.now(),
-      },
-    };
-    await dynamoDb.put(params).promise();
-
-    res.status(200).json({ message: 'Payment history recorded successfully' });
-  } catch (error) {
-    console.error('Error while recording payment history:', error);
-    res.status(500).json({ message: 'Failed to record payment history' });
   }
 });
 
