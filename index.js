@@ -101,31 +101,28 @@ app.post('/bookings', async (req, res) => {
   }
 });
 
-let rzp = new Razorpay({
+const rzp = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_SECRET_KEY
+  key_secret: process.env.RAZORPAY_SECRET_KEY,
 });
 
-
-app.post('/order', async (req, res) => {
-  try {
-    const { amount } = req.body;
-
-    const options = {
-      amount: amount * 100,
-      currency: "INR",
-      receipt: `order_rcptid_${uuidv4()}`,
-    };
-
-    const order = await rzp.orders.create(options);
-    res.status(200).json(order);
-  } catch (err) {
-    console.error("Error creating order:", err);
-    res.status(500).json({
-      message: "Order creation failed",
-      error: err.message
-    });
-  }
+app.post('/order', (req, res) => {
+  const options = {
+    amount: req.body.amount, // amount in the smallest currency unit
+    currency: "INR",
+    receipt: "order_rcptid_11",
+  };
+  rzp.orders.create(options, function(err, order) {
+    if (err) {
+      console.error('Error creating order:', err);
+      res.status(500).json({
+        message: "Order creation failed",
+        error: err,
+      });
+    } else {
+      res.status(200).json(order);
+    }
+  });
 });
 
 app.post('/verify-payment', (req, res) => {
