@@ -132,13 +132,12 @@ app.post('/order', (req, res) => {
 app.post('/verify-payment', (req, res) => {
   const { orderId, paymentId, signature } = req.body;
 
-  const generatedSignature = crypto
-    .createHmac('sha256', process.env.RAZORPAY_API_SECRET_KEY)
-    .update(`${orderId}|${paymentId}`)
-    .digest('hex');
-  if (generatedSignature === signature) {
+  console.log('Received verification request:', { orderId, paymentId, signature });
+  if (verificationSucceeded) {
+    console.log('Payment verification succeeded');
     res.status(200).json({ status: 'success' });
   } else {
+    console.log('Payment verification failed');
     res.status(400).json({ status: 'failure' });
   }
 });
