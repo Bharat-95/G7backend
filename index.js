@@ -108,7 +108,7 @@ const rzp = new Razorpay({
 
 app.post('/order', (req, res) => {
   const options = {
-    amount: req.body.amount,
+    amount: req.body.amount * 100, 
     currency: "INR",
     receipt: "order_rcptid_11"
   };
@@ -121,11 +121,11 @@ app.post('/order', (req, res) => {
         error: err
       });
     } else {
-      // Return the orderId in the response
       res.status(200).json({ orderId: order.id });
     }
   });
 });
+
 
 
 
