@@ -108,22 +108,26 @@ const rzp = new Razorpay({
 
 app.post('/order', (req, res) => {
   const options = {
-    amount: req.body.amount, // amount in the smallest currency unit
+    amount: req.body.amount,
     currency: "INR",
-    receipt: "order_rcptid_11",
+    receipt: "order_rcptid_11"
   };
+  
   rzp.orders.create(options, function(err, order) {
     if (err) {
       console.error('Error creating order:', err);
       res.status(500).json({
         message: "Order creation failed",
-        error: err,
+        error: err
       });
     } else {
-      res.status(200).json(order);
+      // Return the orderId in the response
+      res.status(200).json({ orderId: order.id });
     }
   });
 });
+
+
 
 app.post('/verify-payment', (req, res) => {
   const { orderId, paymentId, signature } = req.body;
