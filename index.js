@@ -132,11 +132,12 @@ app.post('/order', (req, res) => {
 app.post('/verify-payment', (req, res) => {
   const { orderId, paymentId, signature } = req.body;
 
-  // Log request parameters
   console.log('Received verification request:', { orderId, paymentId, signature });
 
-  // Verification logic
+  // Actual signature generation function
   const generatedSignature = generateSignature(orderId, paymentId);
+
+  // Your verification logic
   const verificationSucceeded = generatedSignature === signature;
 
   // Log verification result
