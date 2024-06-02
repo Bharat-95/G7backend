@@ -128,19 +128,20 @@ app.post('/order', (req, res) => {
 
 
 
+function generateSignature(orderId, paymentId) {
+
+  return orderId + paymentId; 
+}
 
 app.post('/verify-payment', (req, res) => {
   const { orderId, paymentId, signature } = req.body;
 
   console.log('Received verification request:', { orderId, paymentId, signature });
 
-  // Actual signature generation function
   const generatedSignature = generateSignature(orderId, paymentId);
 
-  // Your verification logic
   const verificationSucceeded = generatedSignature === signature;
 
-  // Log verification result
   if (verificationSucceeded) {
     console.log('Payment verification succeeded');
     res.status(200).json({ status: 'success' });
@@ -149,6 +150,7 @@ app.post('/verify-payment', (req, res) => {
     res.status(400).json({ status: 'failure' });
   }
 });
+
 
 
 
