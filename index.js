@@ -102,12 +102,12 @@ const rzp = new Razorpay({
 
 app.post('/order', (req, res) => {
   const options = {
-    amount: req.body.amount * 100,
+    amount: req.body.amount * 100, 
     currency: "INR",
-    receipt: `order_rcptid_${uuidv4()}`
+    receipt: "order_rcptid_11"
   };
-
-  rzp.orders.create(options, (err, order) => {
+  
+  rzp.orders.create(options, function(err, order) {
     if (err) {
       console.error('Error creating order:', err);
       res.status(500).json({
@@ -120,28 +120,19 @@ app.post('/order', (req, res) => {
   });
 });
 
+
+
+
 app.post('/verify', (req, res) => {
-  try {
-    const { orderId, paymentId, signature } = req.body;
-    console.log('Received verification request:', { orderId, paymentId, signature });
+  const data = crypto.createHmac('sha256', process.env.RAZORPAY_SECRET_KEY);
+  data.update(JSON.stringify(req.body));
+  const digest = data.digest('hex');
 
-    const generatedSignature = crypto
-      .createHmac('sha256', process.env.RAZORPAY_SECRET_KEY)
-      .update(`${orderId}|${paymentId}`)
-      .digest('hex');
-
-    const verificationSucceeded = generatedSignature === signature;
-
-    if (verificationSucceeded) {
-      console.log('Payment verification succeeded');
-      res.status(200).json({ status: 'success' });
-    } else {
-      console.log('Payment verification failed');
-      res.status(400).json({ status: 'failure', message: 'Invalid signature' });
-    }
-  } catch (error) {
-    console.error('Error in /verify-payment:', error);
-    res.status(500).json({ status: 'error', message: 'Internal server error' });
+  if (digest === req.headers['x-razorpay-signature']) {
+    console.log('Request is legitimate');
+    res.json({ status: 'ok' });
+  } else {
+    res.status(400).send('Invalid signature');
   }
 });
 
