@@ -11,7 +11,7 @@ require('dotenv').config()
 
 
 
-console.log(`RAZORPAY_API_KEY: ${process.env.RAZORPAY_API_KEY}`);
+console.log(`RAZORPAY_API_KEY: ${process.env.RAZORPAY_KEY_ID}`);
 console.log(`RAZORPAY_SECRET_KEY: ${process.env.RAZORPAY_SECRET_KEY}`);
 
 
