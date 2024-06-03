@@ -11,6 +11,9 @@ require('dotenv').config()
 
 
 
+
+
+
 const upload = multer({
   storage: multer.memoryStorage()
 });
@@ -99,11 +102,11 @@ app.post('/bookings', async (req, res) => {
 });
 
 const rzp = new Razorpay({
-  key_id: process.env.RAZORPAY_API_KEY,
-  key_secret: process.env.RAZORPAY_SECRET_KEY,
+  key_id: 'rzp_live_9cEwdDqxyXPgnL',
+  key_secret: 'EaXIwNI6oDhQX6ul7UjWrv25',
 });
 
-app.post('/order', (req, res) => {
+app.post('/orderId', (req, res) => {
   const options = {
     amount: req.body.amount * 100, 
     currency: "INR",
@@ -125,31 +128,30 @@ app.post('/order', (req, res) => {
 
 
 
+function generateSignature(orderId, paymentId) {
+
+  return orderId + paymentId; 
+}
+
 app.post('/verify', (req, res) => {
-  try {
-    const { orderId, paymentId, signature } = req.body;
+  const { orderId, paymentId, signature } = req.body;
 
-    console.log('Received verification request:', { orderId, paymentId, signature });
+  const generatedSignature = generateSignature(orderId, paymentId);
 
-    const generatedSignature = crypto
-      .createHmac('sha256', process.env.RAZORPAY_SECRET_KEY)
-      .update(`${orderId}|${paymentId}`)
-      .digest('hex');
+  const verificationSucceeded = generatedSignature === signature;
 
-    const verificationSucceeded = generatedSignature === signature;
-
-    if (verificationSucceeded) {
-      console.log('Payment verification succeeded');
-      res.status(200).json({ status: 'success' });
-    } else {
-      console.log('Payment verification failed');
-      res.status(400).json({ status: 'failure', message: 'Invalid signature' });
-    }
-  } catch (error) {
-    console.error('Error in /verify-payment:', error);
-    res.status(500).json({ status: 'error', message: 'Internal server error' });
+  if (verificationSucceeded) {
+    console.log('Payment verification succeeded');
+    res.status(200).json({ status: 'success' });
+  } else {
+    console.log('Payment verification failed');
+    res.status(400).json({ status: 'failure' });
   }
 });
+
+
+
+
 
 
 app.get('/cars', async (req, res) => {
