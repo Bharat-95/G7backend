@@ -102,8 +102,8 @@ app.post('/bookings', async (req, res) => {
 });
 
 const rzp = new Razorpay({
-  key_id: 'rzp_live_9cEwdDqxyXPgnL',
-  key_secret: 'EaXIwNI6oDhQX6ul7UjWrv25',
+  key_id: process.env.RAZORPAY_API_KEY,
+  key_secret: process.env.RAZORPAY_SECRET_KEY,
 });
 
 app.post('/create/orderId', (req, res) => {
@@ -135,8 +135,6 @@ function generateSignature(orderId, paymentId) {
 
 app.post('/api/payment/verify', (req, res) => {
   const { orderId, paymentId, signature } = req.body;
-
-  console.log('Received verification request:', { orderId, paymentId, signature });
 
   const generatedSignature = generateSignature(orderId, paymentId);
 
