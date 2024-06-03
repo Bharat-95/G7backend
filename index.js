@@ -107,7 +107,7 @@ const rzp = new Razorpay({
   key_secret: process.env.RAZORPAY_SECRET_KEY,
 });
 
-app.post('/create/orderId', (req, res) => {
+app.post('/order', (req, res) => {
   const options = {
     amount: req.body.amount * 100, 
     currency: "INR",
@@ -134,7 +134,7 @@ function generateSignature(orderId, paymentId) {
   return orderId + paymentId; 
 }
 
-app.post('/api/payment/verify', (req, res) => {
+app.post('/verify', (req, res) => {
   const { orderId, paymentId, signature } = req.body;
 
   const generatedSignature = generateSignature(orderId, paymentId);
