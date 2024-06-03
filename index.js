@@ -130,31 +130,18 @@ app.post('/order', (req, res) => {
 
 
 app.post('/verify-payment', (req, res) => {
+  const data = crypto.createHmac('sha256', process.env.RAZORPAY_SECRET_KEY);
+  data.update(JSON.stringify(req.body));
+  const digest = data.digest('hex');
 
-
-const data = crypto.createHmac('sha256', process.env.RAZORPAY_SECRET_KEY)
-
-  data.update(JSON.stringify(req.body))
-
-  const digest = data.digest('hex')
-
-if (digest === req.headers['x-razorpay-signature']) {
-
-      console.log('request is legit')
-
-      res.json({
-
-          status: 'ok'
-
-      })
-
-} else {
-
-      res.status(400).send('Invalid signature');
-
+  if (digest === req.headers['x-razorpay-signature']) {
+    console.log('Request is legitimate');
+    res.json({ status: 'ok' });
+  } else {
+    res.status(400).send('Invalid signature');
   }
+});
 
-})
 
 
 
