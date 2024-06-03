@@ -124,7 +124,7 @@ app.post('/order', (req, res) => {
 
 
 app.post('/verify', (req, res) => {
-  const data = crypto.createHmac('sha256', 'EaXIwNI6oDhQX6ul7UjWrv25');
+  const data = crypto.createHmac('sha256', process.env.RAZORPAY_SECRET_KEY);
   data.update(JSON.stringify(req.body));
   const digest = data.digest('hex');
 
