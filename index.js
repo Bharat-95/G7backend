@@ -7,7 +7,8 @@ const { v4: uuidv4 } = require('uuid');
 const multer = require('multer');
 const crypto = require('crypto');
 const Razorpay = require('razorpay');
-require('dotenv').config();
+require('dotenv').config()
+
 
 
 const upload = multer({
@@ -43,12 +44,12 @@ app.post('/cars', upload.fields([
     const imageFields = ['Coverimage', 'RcFront', 'RcBack', 'AdhaarFront', 'AdhaarBack', 'Insurance', 'Pollution', 'AgreementDoc'];
     for (const field of imageFields) {
       if (req.files[field] && req.files[field].length > 0) {
-        const images = req.files[field];
+        const images = req.files[field]; 
         const imageUrls = [];
         for (const image of images) {
           const params = {
             Bucket: 'g7cars',
-            Key: `${uuidv4()}-${image.originalname}`,
+            Key: image.originalname,
             Body: image.buffer
           };
           const data = await s3.upload(params).promise();
@@ -64,22 +65,24 @@ app.post('/cars', upload.fields([
     };
 
     await dynamoDb.put(params).promise();
-    res.status(200).json({ message: 'Uploaded data and images successfully' });
+    res.status(200).send('Uploaded data and images successfully');
   } catch (error) {
     console.error('Unable to post details', error);
-    res.status(500).json({ message: 'Unable to post details to DynamoDB' });
+    res.status(500).send('Unable to post details to DynamoDB');
   }
 });
 
 app.post('/bookings', async (req, res) => {
   try {
+    const dynamoDb = new AWS.DynamoDB.DocumentClient();
     const { carId, pickupDateTime, dropoffDateTime } = req.body;
+    
     const bookingId = uuidv4();
 
     const params = {
       TableName: 'Bookings',
       Item: {
-        G7cars123: bookingId,
+        G7cars123: bookingId, 
         carId,
         pickupDateTime,
         dropoffDateTime,
@@ -96,18 +99,18 @@ app.post('/bookings', async (req, res) => {
 });
 
 const rzp = new Razorpay({
-  key_id: 'rzp_live_9cEwdDqxyXPgnL',
-  key_secret: 'EaXIwNI6oDhQX6ul7UjWrv25',
+  key_id: process.env.RAZORPAY_API_KEY,
+  key_secret: process.env.RAZORPAY_SECRET_KEY,
 });
 
 app.post('/order', (req, res) => {
   const options = {
-    amount: req.body.amount * 100,
+    amount: req.body.amount * 100, 
     currency: "INR",
-    receipt: `order_rcptid_${uuidv4()}`
+    receipt: "order_rcptid_11"
   };
-
-  rzp.orders.create(options, (err, order) => {
+  
+  rzp.orders.create(options, function(err, order) {
     if (err) {
       console.error('Error creating order:', err);
       res.status(500).json({
@@ -120,13 +123,16 @@ app.post('/order', (req, res) => {
   });
 });
 
+
+
 app.post('/verify', (req, res) => {
   try {
     const { orderId, paymentId, signature } = req.body;
+
     console.log('Received verification request:', { orderId, paymentId, signature });
 
     const generatedSignature = crypto
-      .createHmac('sha256', 'EaXIwNI6oDhQX6ul7UjWrv25')
+      .createHmac('sha256', process.env.RAZORPAY_SECRET_KEY)
       .update(`${orderId}|${paymentId}`)
       .digest('hex');
 
@@ -145,6 +151,7 @@ app.post('/verify', (req, res) => {
   }
 });
 
+
 app.get('/cars', async (req, res) => {
   try {
     const params = {
@@ -154,9 +161,11 @@ app.get('/cars', async (req, res) => {
     res.json(data.Items);
   } catch (error) {
     console.error('Error fetching data from DynamoDB:', error);
-    res.status(500).json({ message: 'Unable to fetch data from DynamoDB' });
+    res.status(500).send('Unable to fetch data from DynamoDB');
   }
 });
+
+
 
 app.put('/cars/:carNo', async (req, res) => {
   const carNo = req.params.carNo;
@@ -181,9 +190,11 @@ app.put('/cars/:carNo', async (req, res) => {
     res.status(200).json(data.Attributes);
   } catch (error) {
     console.error('Error updating car data:', error);
-    res.status(500).json({ message: 'Unable to update car data' });
+    res.status(500).send('Unable to update car data');
   }
 });
+
+
 
 app.delete('/cars/:carNo', async (req, res) => {
   const carNo = req.params.carNo;
@@ -197,35 +208,39 @@ app.delete('/cars/:carNo', async (req, res) => {
   };
 
   try {
+    
     const carDetails = await dynamoDb.get(params).promise();
     const carData = carDetails.Item;
+
 
     const imageUrls = [];
     for (const key in carData) {
       if (key.endsWith('Back') || key.endsWith('Front') || key === 'Coverimage' || key === 'Insurance' || key === 'AdhaarBack' || key === 'AdhaarFront' || key === 'RcBack' || key === 'RcFront') {
         const imageAttribute = carData[key];
-        if (imageAttribute && Array.isArray(imageAttribute)) {
-          imageAttribute.forEach(image => {
-            imageUrls.push(image);
+        if (imageAttribute && imageAttribute.L && imageAttribute.L.length > 0) {
+          imageAttribute.L.forEach(image => {
+            imageUrls.push(image.S);
           });
         }
       }
     }
 
+    
     await dynamoDb.delete(params).promise();
 
+  
     await Promise.all(imageUrls.map(async (imageUrl) => {
       const imageKey = getImageKeyFromUrl(imageUrl);
       await s3.deleteObject({ Bucket: 'g7cars', Key: imageKey }).promise();
     }));
 
-    res.status(200).json({ message: 'Car deleted successfully' });
+    res.status(200).send('Car deleted successfully');
   } catch (error) {
     console.error('Error deleting car data:', error.message, 'Details:', error);
     if (error.code === 'ConditionalCheckFailedException') {
-      res.status(404).json({ message: 'Car not found' });
+      res.status(404).send('Car not found');
     } else {
-      res.status(500).json({ message: 'Unable to delete car data' });
+      res.status(500).send('Unable to delete car data');
     }
   }
 });
@@ -234,6 +249,11 @@ function getImageKeyFromUrl(imageUrl) {
   const parts = imageUrl.split('/');
   return parts[parts.length - 1];
 }
+
+
+
+
+
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
