@@ -129,21 +129,21 @@ app.post('/order', (req, res) => {
 
 
 
-app.post('/verify-payment', (req, res) => {
-  const data = crypto.createHmac('sha256', process.env.RAZORPAY_SECRET_KEY);
-  data.update(JSON.stringify(req.body));
-  const digest = data.digest('hex');
+app.post('/verify-payment', async (req, res) => {
+  const {razorpay_order_id,razorpay_payment_id,razorpay_signature}=req.body;
+  const body = razorpay_order_id + "|" +razorpay_payment_id;
+  const expectedsgnature =crypto.createHmac('sha256',process.env.RAZORPAY_SECRET_KEY).update(body.toString()).digest('hex')
+  const isauth = expectedsgnature === razorpay_signature;
+  if(isauth){
+   await Payment.create({
+       razorpay_order_id,razorpay_payment_id,razorpay_signature 
+   })
 
-  if (digest === req.headers['x-razorpay-signature']) {
-    console.log('Request is legitimate');
-    res.json({ status: 'ok' });
-  } else {
-    res.status(400).send('Invalid signature');
   }
-});
-
-
-
+  else{
+   res.status(400).json({success:false});
+  }
+})
 
 
 
