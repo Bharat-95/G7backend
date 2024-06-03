@@ -135,24 +135,30 @@ function generateSignature(orderId, paymentId) {
 }
 
 app.post('/verify', (req, res) => {
-  const { orderId, paymentId, signature } = req.body;
+  try {
+    const { orderId, paymentId, signature } = req.body;
 
-  const generatedSignature = generateSignature(orderId, paymentId);
+    console.log('Received verification request:', { orderId, paymentId, signature });
 
-  const verificationSucceeded = generatedSignature === signature;
+    const generatedSignature = crypto
+      .createHmac('sha256', process.env.RAZORPAY_SECRET_KEY)
+      .update(`${orderId}|${paymentId}`)
+      .digest('hex');
 
-  if (verificationSucceeded) {
-    console.log('Payment verification succeeded');
-    res.status(200).json({ status: 'success' });
-  } else {
-    console.log('Payment verification failed');
-    res.status(400).json({ status: 'failure' });
+    const verificationSucceeded = generatedSignature === signature;
+
+    if (verificationSucceeded) {
+      console.log('Payment verification succeeded');
+      res.status(200).json({ status: 'success' });
+    } else {
+      console.log('Payment verification failed');
+      res.status(400).json({ status: 'failure', message: 'Invalid signature' });
+    }
+  } catch (error) {
+    console.error('Error in /verify-payment:', error);
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
   }
 });
-
-
-
-
 
 
 app.get('/cars', async (req, res) => {
