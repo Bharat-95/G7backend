@@ -106,7 +106,7 @@ const rzp = new Razorpay({
   key_secret: 'EaXIwNI6oDhQX6ul7UjWrv25',
 });
 
-app.post('/orderId', (req, res) => {
+app.post('/order', (req, res) => {
   const options = {
     amount: req.body.amount * 100, 
     currency: "INR",
