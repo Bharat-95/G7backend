@@ -103,7 +103,7 @@ app.post('/bookings', async (req, res) => {
 
 const rzp = new Razorpay({
   key_id: process.env.RAZORPAY_API_KEY,
-  key_secret: process.env.RAZORPAY_SECRET,
+  key_secret: process.env.RAZORPAY_SECRET_KEY,
 });
 
 app.post('/order', (req, res) => {
