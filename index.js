@@ -134,24 +134,24 @@ app.post('/verify', async (req, res) => {
 
   if (verificationSucceeded) {
     try {
-      const carNo = req.params.carNo
-      
-      
-      const updateCarParams = {
-        TableName: 'G7Cars',
+      const updateBookingParams = {
+        TableName: 'Bookings',
         Key: {
-          carNo: carNo 
+          G7cars123: bookingId 
         },
-        UpdateExpression: 'set #status = :status',
+        UpdateExpression: 'set #status = :status, paymentId = :paymentId',
         ExpressionAttributeNames: {
           '#status': 'status'
         },
         ExpressionAttributeValues: {
-          ':status': 'booked'
+          ':status': 'confirmed',
+          ':paymentId': paymentId
         },
         ReturnValues: 'ALL_NEW'
       };
-      await dynamoDb.update(updateCarParams).promise();
+      await dynamoDb.update(updateBookingParams).promise();
+      
+      
 
       res.status(200).json({ status: 'success' });
     } catch (error) {
