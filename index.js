@@ -123,7 +123,6 @@ const generateSignature = (paymentId, secret) => {
   hmac.update(paymentId);
   return hmac.digest('hex');
 };
-
 app.post('/verify', async (req, res) => {
   const { signature, paymentId } = req.body;
   console.log('Raw request body:', req.body); 
