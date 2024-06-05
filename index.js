@@ -127,14 +127,17 @@ function generateSignature(orderId, paymentId) {
 
 app.post('/verify', async (req, res) => {
   const { orderId, paymentId, signature, bookingId, carId } = req.body;
-
+  
+  console.log('Received data:', { orderId, paymentId, signature, bookingId, carId });
+  
   const generatedSignature = generateSignature(orderId, paymentId);
 
-  console.log(generatedSignature)
+  console.log('Generated Signature:', generatedSignature);
+  console.log('Incoming Signature:', signature);
 
   const verificationSucceeded = generatedSignature === signature;
 
-  console.log(verificationSucceeded)
+  console.log('Verification Succeeded:', verificationSucceeded);
 
   if (verificationSucceeded) {
     try {
