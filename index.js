@@ -137,7 +137,7 @@ app.post('/verify', async (req, res) => {
     return res.status(400).json({ status: 'failure', message: 'Signature or paymentId is undefined' });
   }
   
-  const secret = process.env.RAZORPAY_API_KEY; 
+  const secret = 'EaXIwNI6oDhQX6ul7UjWrv25'; 
   
   const generatedSignature = generateSignature(paymentId, secret, orderId);
 
