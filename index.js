@@ -128,8 +128,7 @@ app.post('/verify', async (req, res) => {
   console.log('Raw request body:', req.body); 
   
   console.log('Received data:', { orderId, signature });
-
-  // Check if orderId or signature is undefined
+  
   if (!orderId || !signature) {
     console.error('orderId or signature is undefined');
     return res.status(400).json({ status: 'failure', message: 'orderId or signature is undefined' });
