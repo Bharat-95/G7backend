@@ -124,9 +124,7 @@ app.post('/verify', async (req, res) => {
   const { paymentId, orderId, razorpay_signature } = req.body;
   const secret = 'EaXIwNI6oDhQX6ul7UjWrv25'; 
 
-  const generated_signature = crypto.createHmac('sha256', secret)
-                                    .update(orderId + "|" + paymentId)
-                                    .digest('hex');
+  generated_signature = hmac_sha256(orderId+ "|" + paymentId, secret);
 
 
   const verificationSucceeded = (generated_signature === razorpay_signature);
