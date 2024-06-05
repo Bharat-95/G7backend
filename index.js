@@ -37,7 +37,8 @@ app.post('/cars', upload.fields([
   try {
     const item = {
       G7cars123: uuidv4(),
-      ...req.body
+      ...req.body,
+      status: 'Available'
     };
 
     const imageFields = ['Coverimage', 'RcFront', 'RcBack', 'AdhaarFront', 'AdhaarBack', 'Insurance', 'Pollution', 'AgreementDoc'];
