@@ -120,11 +120,12 @@ app.post('/order', (req, res) => {
 
 const generateSignature = (paymentId, secret, orderId) => {
   const hmac = crypto.createHmac('sha256', secret);
-  hmac.update(paymentId, orderId);
+  hmac.update(paymentId + orderId); 
   return hmac.digest('hex');
 };
+
 app.post('/verify', async (req, res) => {
-  const { signature, paymentId, razorpay_order_id } = req.body;
+  const { signature, paymentId, orderId} = req.body;
   console.log('Raw request body:', req.body); 
   console.log('orderId', orderId)
   
@@ -138,7 +139,7 @@ app.post('/verify', async (req, res) => {
   
   const secret = process.env.RAZORPAY_API_KEY; 
   
-  const generatedSignature = generateSignature(paymentId, secret);
+  const generatedSignature = generateSignature(paymentId, secret, orderId);
 
   console.log('Generated Signature:', generatedSignature);
   console.log('Incoming Signature:', signature);
