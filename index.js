@@ -130,7 +130,11 @@ app.post('/verify', async (req, res) => {
 
   const generatedSignature = generateSignature(orderId, paymentId);
 
+  console.log(generatedSignature)
+
   const verificationSucceeded = generatedSignature === signature;
+
+  console.log(verificationSucceeded)
 
   if (verificationSucceeded) {
     try {
