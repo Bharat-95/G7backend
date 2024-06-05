@@ -118,11 +118,10 @@ app.post('/order', (req, res) => {
   });
 });
 
-function generateSignature(orderId, paymentId) {
-
-  return crypto.createHmac('sha256', 'EaXIwNI6oDhQX6ul7UjWrv25')
-  .update(orderId + '|' + paymentId)
-  .digest('hex');
+function generateSignature(orderId, secretKey) {
+  const hmac = crypto.createHmac('sha256', 'EaXIwNI6oDhQX6ul7UjWrv25');
+  hmac.update(orderId);
+  return hmac.digest('hex');
 }
 
 app.post('/verify', async (req, res) => {
