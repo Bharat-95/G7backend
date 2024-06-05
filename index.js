@@ -120,7 +120,7 @@ app.post('/order', (req, res) => {
 
 function generateSignature(orderId, paymentId) {
 
-  return crypto.createHmac('sha256', process.env.RAZORPAY_API_SECRET)
+  return crypto.createHmac('sha256', 'EaXIwNI6oDhQX6ul7UjWrv25')
   .update(orderId + '|' + paymentId)
   .digest('hex');
 }
