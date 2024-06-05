@@ -127,8 +127,9 @@ const generateSignature = (paymentId, orderId, secret) => {
 };
 
 app.post('/verify', async (req, res) => {
-  const { paymentId, orderId, razorpay_signature } = req.body;
+  const { paymentId, orderId } = req.body;
   const secret = 'EaXIwNI6oDhQX6ul7UjWrv25'; 
+  const razorpay_signature = req.body.signature;
 
   // Generate the signature using the provided function
   const generated_signature = generateSignature(paymentId, orderId, secret);
