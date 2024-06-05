@@ -9,17 +9,16 @@ const crypto = require('crypto');
 const Razorpay = require('razorpay');
 require('dotenv').config()
 
+
 const upload = multer({
   storage: multer.memoryStorage()
 });
 AWS.config.update({ region: 'us-east-1' });
 const dynamoDb = new AWS.DynamoDB.DocumentClient();
 const tableName = 'G7Cars';
-const bookingsTable = 'Bookings';
 const s3 = new AWS.S3();
 app.use(cors());
 app.use(express.json());
-
 app.post('/cars', upload.fields([
   { name: 'Coverimage', maxCount: 1 },
   { name: 'RcFront', maxCount: 1 },
@@ -37,6 +36,7 @@ app.post('/cars', upload.fields([
       ...req.body,
       status: 'available'
     };
+
     const imageFields = ['Coverimage', 'RcFront', 'RcBack', 'AdhaarFront', 'AdhaarBack', 'Insurance', 'Pollution', 'AgreementDoc'];
     for (const field of imageFields) {
       if (req.files[field] && req.files[field].length > 0) {
@@ -74,7 +74,7 @@ app.post('/bookings', async (req, res) => {
     const bookingId = uuidv4();
 
     const bookingParams = {
-      TableName: bookingsTable,
+      TableName: 'Bookings',
       Item: {
         bookingId,
         carId,
@@ -93,14 +93,14 @@ app.post('/bookings', async (req, res) => {
   }
 });
 
+
 const rzp = new Razorpay({
   key_id: process.env.RAZORPAY_API_KEY,
-  key_secret: process.env.RAZORPAY_API_SECRET,
+  key_secret: 'EaXIwNI6oDhQX6ul7UjWrv25',
 });
-
 app.post('/order', (req, res) => {
   const options = {
-    amount: req.body.amount * 100,
+    amount: req.body.amount * 100, 
     currency: "INR",
     receipt: "order_rcptid_11"
   };
@@ -119,9 +119,10 @@ app.post('/order', (req, res) => {
 });
 
 function generateSignature(orderId, paymentId) {
+
   return crypto.createHmac('sha256', process.env.RAZORPAY_API_SECRET)
-    .update(orderId + '|' + paymentId)
-    .digest('hex');
+  .update(orderId + '|' + paymentId)
+  .digest('hex');
 }
 
 app.post('/verify', async (req, res) => {
@@ -134,7 +135,7 @@ app.post('/verify', async (req, res) => {
   if (verificationSucceeded) {
     try {
       const updateBookingParams = {
-        TableName: bookingsTable,
+        TableName: 'Bookings',
         Key: { bookingId },
         UpdateExpression: 'set #status = :status, paymentId = :paymentId',
         ExpressionAttributeNames: {
@@ -147,9 +148,8 @@ app.post('/verify', async (req, res) => {
         ReturnValues: 'ALL_NEW'
       };
       await dynamoDb.update(updateBookingParams).promise();
-
       const updateCarParams = {
-        TableName: tableName,
+        TableName: 'G7Cars',
         Key: { carId },
         UpdateExpression: 'set #status = :status',
         ExpressionAttributeNames: {
@@ -173,6 +173,7 @@ app.post('/verify', async (req, res) => {
   }
 });
 
+
 app.get('/cars', async (req, res) => {
   try {
     const params = {
@@ -185,6 +186,8 @@ app.get('/cars', async (req, res) => {
     res.status(500).send('Unable to fetch data from DynamoDB');
   }
 });
+
+
 
 app.put('/cars/:carNo', async (req, res) => {
   const carNo = req.params.carNo;
@@ -213,6 +216,8 @@ app.put('/cars/:carNo', async (req, res) => {
   }
 });
 
+
+
 app.delete('/cars/:carNo', async (req, res) => {
   const carNo = req.params.carNo;
 
@@ -225,8 +230,10 @@ app.delete('/cars/:carNo', async (req, res) => {
   };
 
   try {
+    
     const carDetails = await dynamoDb.get(params).promise();
     const carData = carDetails.Item;
+
 
     const imageUrls = [];
     for (const key in carData) {
@@ -240,8 +247,10 @@ app.delete('/cars/:carNo', async (req, res) => {
       }
     }
 
+    
     await dynamoDb.delete(params).promise();
 
+  
     await Promise.all(imageUrls.map(async (imageUrl) => {
       const imageKey = getImageKeyFromUrl(imageUrl);
       await s3.deleteObject({ Bucket: 'g7cars', Key: imageKey }).promise();
@@ -257,10 +266,16 @@ app.delete('/cars/:carNo', async (req, res) => {
     }
   }
 });
+
 function getImageKeyFromUrl(imageUrl) {
   const parts = imageUrl.split('/');
   return parts[parts.length - 1];
 }
+
+
+
+
+
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
