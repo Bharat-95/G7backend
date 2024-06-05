@@ -118,8 +118,9 @@ app.post('/order', (req, res) => {
   });
 });
 
-function generateSignature(secret) {
+function generateSignature(paymentId, secret) {
   const hmac = crypto.createHmac('sha256', secret);
+  hmac.update(paymentId);
   return hmac.digest('hex');
 }
 
@@ -128,17 +129,16 @@ app.post('/verify', async (req, res) => {
   console.log('Raw request body:', req.body); 
   
   console.log('Received signature:', signature);
-
-  console.log('Payment Id',  paymentId);
+  console.log('Payment Id', paymentId);
   
-  if (!signature) {
-    console.error('Signature is undefined');
-    return res.status(400).json({ status: 'failure', message: 'Signature is undefined' });
+  if (!signature || !paymentId) {
+    console.error('Signature or paymentId is undefined');
+    return res.status(400).json({ status: 'failure', message: 'Signature or paymentId is undefined' });
   }
   
-  const secret = 'EaXIwNI6oDhQX6ul7UjWrv25';
+  const secret = 'your_secret_here'; // Replace 'your_secret_here' with your actual secret
   
-  const generatedSignature = generateSignature(secret, paymentId);
+  const generatedSignature = generateSignature(paymentId, secret);
 
   console.log('Generated Signature:', generatedSignature);
   console.log('Incoming Signature:', signature);
@@ -146,7 +146,6 @@ app.post('/verify', async (req, res) => {
   const verificationSucceeded = generatedSignature === signature;
 
   console.log('Verification Succeeded:', verificationSucceeded);
-
 
   if (verificationSucceeded) {
     try {
