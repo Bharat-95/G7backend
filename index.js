@@ -10,23 +10,15 @@ const Razorpay = require('razorpay');
 require('dotenv').config()
 
 
-
-
-
-
 const upload = multer({
   storage: multer.memoryStorage()
 });
-
 AWS.config.update({ region: 'us-east-1' });
-
 const dynamoDb = new AWS.DynamoDB.DocumentClient();
 const tableName = 'G7Cars';
 const s3 = new AWS.S3();
-
 app.use(cors());
 app.use(express.json());
-
 app.post('/cars', upload.fields([
   { name: 'Coverimage', maxCount: 1 },
   { name: 'RcFront', maxCount: 1 },
@@ -102,10 +94,9 @@ app.post('/bookings', async (req, res) => {
 });
 
 const rzp = new Razorpay({
-  key_id: process.env.RAZORPAY_API_KEY,
+  key_id: 'rzp_live_9cEwdDqxyXPgnL',
   key_secret: process.env.RAZORPAY_SECRET_KEY,
 });
-
 app.post('/order', (req, res) => {
   const options = {
     amount: req.body.amount * 100, 
@@ -125,8 +116,6 @@ app.post('/order', (req, res) => {
     }
   });
 });
-
-
 
 function generateSignature(orderId, paymentId) {
 
@@ -148,11 +137,6 @@ app.post('/verify', (req, res) => {
     res.status(400).json({ status: 'failure' });
   }
 });
-
-
-
-
-
 
 app.get('/cars', async (req, res) => {
   try {
