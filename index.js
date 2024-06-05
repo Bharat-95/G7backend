@@ -120,7 +120,7 @@ app.post('/order', (req, res) => {
 
 const generateSignature = (paymentId, secret, orderId) => {
   const hmac = crypto.createHmac('sha256', secret);
-  hmac.update(paymentId + orderId); 
+  hmac.update(paymentId + "|" + orderId); 
   return hmac.digest('hex');
 };
 
