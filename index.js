@@ -74,29 +74,29 @@ app.post('/cars', upload.fields([
 
 app.post('/bookings', async (req, res) => {
   try {
-    const dynamoDb = new AWS.DynamoDB.DocumentClient();
     const { carId, pickupDateTime, dropoffDateTime } = req.body;
-    
     const bookingId = uuidv4();
 
-    const params = {
+    const bookingParams = {
       TableName: 'Bookings',
       Item: {
-        G7cars123: bookingId, 
+        bookingId,
         carId,
         pickupDateTime,
         dropoffDateTime,
-        createdAt: Date.now(),
+        createdAt: new Date().toISOString(),
+        status: 'pending'
       },
     };
-    await dynamoDb.put(params).promise();
+    await dynamoDb.put(bookingParams).promise();
 
-    res.status(200).json({ message: 'Booking successful' });
+    res.status(200).json({ message: 'Booking created, awaiting payment', bookingId });
   } catch (error) {
-    console.error('Error while booking:', error);
-    res.status(500).json({ message: 'Failed to book the car' });
+    console.error('Error while creating booking:', error);
+    res.status(500).json({ message: 'Failed to create booking' });
   }
 });
+
 
 const rzp = new Razorpay({
   key_id: 'rzp_live_9cEwdDqxyXPgnL',
