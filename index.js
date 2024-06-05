@@ -129,9 +129,16 @@ const generateSignature = (paymentId, orderId, secret) => {
 app.post('/verify', async (req, res) => {
   const { paymentId, orderId, razorpay_signature } = req.body;
   const secret = 'EaXIwNI6oDhQX6ul7UjWrv25'; 
+
+  // Generate the signature using the provided function
   const generated_signature = generateSignature(paymentId, orderId, secret);
+
+  // Compare the generated signature with the Razorpay signature
   const verificationSucceeded = (generated_signature === razorpay_signature);
 
+  // Log the generated and received signatures for debugging
+  console.log('Generated Signature:', generated_signature);
+  console.log('Received Signature:', razorpay_signature);
   if (verificationSucceeded) {
     try {
       const updateBookingParams = {
