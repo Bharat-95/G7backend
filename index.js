@@ -118,37 +118,18 @@ app.post('/order', (req, res) => {
   });
 });
 
-const generateSignature = (orderId, paymentId, secret) => {
-  const data = `${orderId}|${paymentId}`;
-  const hmac = crypto.createHmac('sha256', secret);
-  hmac.update(data);
-  return hmac.digest('hex');
-};
 
 
 app.post('/verify', async (req, res) => {
-  const { signature, paymentId, orderId} = req.body;
-  console.log('Raw request body:', req.body); 
-  console.log('orderId', orderId)
-  
-  console.log('Received signature:', signature);
-  console.log('Payment Id', paymentId);
-  
-  if (!signature || !paymentId) {
-    console.error('Signature or paymentId is undefined');
-    return res.status(400).json({ status: 'failure', message: 'Signature or paymentId is undefined' });
-  }
-  
+  const { paymentId, orderId, razorpay_signature } = req.body;
   const secret = 'EaXIwNI6oDhQX6ul7UjWrv25'; 
-  
-  const generatedSignature = generateSignature(paymentId, secret, orderId);
 
-  console.log('Generated Signature:', generatedSignature);
-  console.log('Incoming Signature:', signature);
+  const generated_signature = crypto.createHmac('sha256', secret)
+                                    .update(orderId + "|" + paymentId)
+                                    .digest('hex');
 
-  const verificationSucceeded = generatedSignature === signature;
 
-  console.log('Verification Succeeded:', verificationSucceeded);
+  const verificationSucceeded = (generated_signature === razorpay_signature);
 
   if (verificationSucceeded) {
     try {
@@ -166,6 +147,7 @@ app.post('/verify', async (req, res) => {
         ReturnValues: 'ALL_NEW'
       };
       await dynamoDb.update(updateBookingParams).promise();
+      
       const updateCarParams = {
         TableName: 'G7Cars',
         Key: { carId },
@@ -190,7 +172,6 @@ app.post('/verify', async (req, res) => {
     res.status(400).json({ status: 'failure' });
   }
 });
-
 
 app.get('/cars', async (req, res) => {
   try {
