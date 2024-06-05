@@ -118,26 +118,26 @@ app.post('/order', (req, res) => {
   });
 });
 
-function generateSignature(data, secret) {
+function generateSignature(secret) {
   const hmac = crypto.createHmac('sha256', secret);
-  hmac.update(data);
+  hmac.update(''); // Update with an empty string or any fixed data if needed
   return hmac.digest('hex');
 }
 
 app.post('/verify', async (req, res) => {
-  const { data, signature } = req.body;
+  const { signature } = req.body;
   console.log('Raw request body:', req.body); 
   
-  console.log('Received data:', { data, signature });
+  console.log('Received signature:', signature);
   
-  if (!data || !signature) {
-    console.error('Data or signature is undefined');
-    return res.status(400).json({ status: 'failure', message: 'Data or signature is undefined' });
+  if (!signature) {
+    console.error('Signature is undefined');
+    return res.status(400).json({ status: 'failure', message: 'Signature is undefined' });
   }
   
-  const secret = 'EaXIwNI6oDhQX6ul7UjWrv25';
+  const secret = 'EaXIwNI6oDhQX6ul7UjWrv25'; // Your secret key
   
-  const generatedSignature = generateSignature(data, secret);
+  const generatedSignature = generateSignature(secret);
 
   console.log('Generated Signature:', generatedSignature);
   console.log('Incoming Signature:', signature);
