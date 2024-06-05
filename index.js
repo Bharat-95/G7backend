@@ -134,6 +134,7 @@ app.post('/verify', async (req, res) => {
 
   if (verificationSucceeded) {
     try {
+      const carNo = req.params.carNo
       
       
       const updateCarParams = {
