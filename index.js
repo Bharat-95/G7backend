@@ -118,11 +118,11 @@ app.post('/order', (req, res) => {
   });
 });
 
-function generateSignature(paymentId, secret) {
+const generateSignature = (paymentId, secret) => {
   const hmac = crypto.createHmac('sha256', secret);
   hmac.update(paymentId);
   return hmac.digest('hex');
-}
+};
 
 app.post('/verify', async (req, res) => {
   const { signature, paymentId } = req.body;
@@ -136,7 +136,7 @@ app.post('/verify', async (req, res) => {
     return res.status(400).json({ status: 'failure', message: 'Signature or paymentId is undefined' });
   }
   
-  const secret = 'your_secret_here'; // Replace 'your_secret_here' with your actual secret
+  const secret = 'EaXIwNI6oDhQX6ul7UjWrv25'; 
   
   const generatedSignature = generateSignature(paymentId, secret);
 
