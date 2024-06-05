@@ -125,12 +125,12 @@ function generateSignature(orderId, secretKey) {
 }
 
 app.post('/verify', async (req, res) => {
-  const { orderId, paymentId, signature } = req.body;
+  const { orderId, signature } = req.body;
   console.log('Raw request body:', req.body); 
   
-  console.log('Received data:', { orderId, paymentId, signature });
+  console.log('Received data:', { orderId, signature });
   
-  const generatedSignature = generateSignature(orderId, paymentId);
+  const generatedSignature = generateSignature(orderId);
 
   console.log('Generated Signature:', generatedSignature);
   console.log('Incoming Signature:', signature);
@@ -141,20 +141,24 @@ app.post('/verify', async (req, res) => {
 
   if (verificationSucceeded) {
     try {
+      // You need to fetch bookingId and carId from somewhere
+      const bookingId = req.body.bookingId; // For example, assuming it's in the request body
+      const carId = req.body.carId; // Similarly, assuming it's in the request body
+
       const updateBookingParams = {
         TableName: 'Bookings',
         Key: { bookingId },
-        UpdateExpression: 'set #status = :status, paymentId = :paymentId',
+        UpdateExpression: 'set #status = :status',
         ExpressionAttributeNames: {
           '#status': 'status'
         },
         ExpressionAttributeValues: {
-          ':status': 'confirmed',
-          ':paymentId': paymentId
+          ':status': 'confirmed'
         },
         ReturnValues: 'ALL_NEW'
       };
       await dynamoDb.update(updateBookingParams).promise();
+
       const updateCarParams = {
         TableName: 'G7Cars',
         Key: { carId },
@@ -179,6 +183,7 @@ app.post('/verify', async (req, res) => {
     res.status(400).json({ status: 'failure' });
   }
 });
+
 
 
 app.get('/cars', async (req, res) => {
