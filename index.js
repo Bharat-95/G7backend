@@ -118,15 +118,15 @@ app.post('/order', (req, res) => {
   });
 });
 
-const generateSignature = (paymentId, secret) => {
+const generateSignature = (paymentId, secret, orderId) => {
   const hmac = crypto.createHmac('sha256', secret);
-  hmac.update(paymentId);
+  hmac.update(paymentId, orderId);
   return hmac.digest('hex');
 };
 app.post('/verify', async (req, res) => {
   const { signature, paymentId, razorpay_order_id } = req.body;
   console.log('Raw request body:', req.body); 
-  console.log(razorpay_order_id)
+  console.log('orderId', orderId)
   
   console.log('Received signature:', signature);
   console.log('Payment Id', paymentId);
