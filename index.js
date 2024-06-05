@@ -126,10 +126,10 @@ function generateSignature(orderId, paymentId) {
 }
 
 app.post('/verify', async (req, res) => {
-  const { orderId, paymentId, signature, bookingId, carId } = req.body;
+  const { orderId, paymentId, signature } = req.body;
   console.log('Raw request body:', req.body); 
   
-  console.log('Received data:', { orderId, paymentId, signature, bookingId, carId });
+  console.log('Received data:', { orderId, paymentId, signature });
   
   const generatedSignature = generateSignature(orderId, paymentId);
 
