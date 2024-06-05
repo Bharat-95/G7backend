@@ -138,7 +138,7 @@ app.post('/verify', async (req, res) => {
     try {
       const updateBookingParams = {
         TableName: 'Bookings',
-        Key: { bookingId },
+        G7cars123: { bookingId },
         UpdateExpression: 'set #status = :status, paymentId = :paymentId',
         ExpressionAttributeNames: {
           '#status': 'status'
@@ -153,7 +153,7 @@ app.post('/verify', async (req, res) => {
       
       const updateCarParams = {
         TableName: 'G7Cars',
-        Key: { carId },
+        G7cars123: carNo,
         UpdateExpression: 'set #status = :status',
         ExpressionAttributeNames: {
           '#status': 'status'
