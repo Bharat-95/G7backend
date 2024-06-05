@@ -80,7 +80,7 @@ app.post('/bookings', async (req, res) => {
     const bookingParams = {
       TableName: 'Bookings',
       Item: {
-        bookingId,
+        G7cars123:bookingId,
         carId,
         pickupDateTime,
         dropoffDateTime,
