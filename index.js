@@ -71,12 +71,13 @@ app.post('/cars', upload.fields([
 app.post('/bookings', async (req, res) => {
   try {
     const { carId, pickupDateTime, dropoffDateTime } = req.body;
-    const bookingId = uuidv4();
+    const G7cars123 = uuidv4();
 
     const bookingParams = {
       TableName: 'Bookings',
       Item: {
         bookingId,
+        G7cars123,
         carId,
         pickupDateTime,
         dropoffDateTime,
