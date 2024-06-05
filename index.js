@@ -37,7 +37,6 @@ app.post('/cars', upload.fields([
       ...req.body,
       status: 'available'
     };
-
     const imageFields = ['Coverimage', 'RcFront', 'RcBack', 'AdhaarFront', 'AdhaarBack', 'Insurance', 'Pollution', 'AgreementDoc'];
     for (const field of imageFields) {
       if (req.files[field] && req.files[field].length > 0) {
@@ -258,7 +257,6 @@ app.delete('/cars/:carNo', async (req, res) => {
     }
   }
 });
-
 function getImageKeyFromUrl(imageUrl) {
   const parts = imageUrl.split('/');
   return parts[parts.length - 1];
