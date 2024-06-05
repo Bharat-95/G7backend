@@ -95,7 +95,7 @@ app.post('/bookings', async (req, res) => {
 
 
 const rzp = new Razorpay({
-  key_id: process.env.RAZORPAY_API_KEY,
+  key_id: 'rzp_live_9cEwdDqxyXPgnL',
   key_secret: 'EaXIwNI6oDhQX6ul7UjWrv25',
 });
 app.post('/order', (req, res) => {
@@ -120,7 +120,7 @@ app.post('/order', (req, res) => {
 
 function generateSignature(orderId, paymentId) {
 
-  return crypto.createHmac('sha256', process.env.RAZORPAY_API_SECRET)
+  return crypto.createHmac('sha256', 'rzp_live_9cEwdDqxyXPgnL')
   .update(orderId + '|' + paymentId)
   .digest('hex');
 }
