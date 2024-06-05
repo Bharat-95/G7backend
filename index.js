@@ -118,23 +118,26 @@ app.post('/order', (req, res) => {
   });
 });
 
-function generateSignature(orderId) {
-  const hmac = crypto.createHmac('sha256', 'EaXIwNI6oDhQX6ul7UjWrv25');
-  hmac.update(orderId);
+function generateSignature(data, secret) {
+  const hmac = crypto.createHmac('sha256', secret);
+  hmac.update(data);
   return hmac.digest('hex');
 }
+
 app.post('/verify', async (req, res) => {
-  const { orderId, signature } = req.body;
+  const { data, signature } = req.body;
   console.log('Raw request body:', req.body); 
   
-  console.log('Received data:', { orderId, signature });
+  console.log('Received data:', { data, signature });
   
-  if (!orderId || !signature) {
-    console.error('orderId or signature is undefined');
-    return res.status(400).json({ status: 'failure', message: 'orderId or signature is undefined' });
+  if (!data || !signature) {
+    console.error('Data or signature is undefined');
+    return res.status(400).json({ status: 'failure', message: 'Data or signature is undefined' });
   }
   
-  const generatedSignature = generateSignature(orderId);
+  const secret = 'EaXIwNI6oDhQX6ul7UjWrv25';
+  
+  const generatedSignature = generateSignature(data, secret);
 
   console.log('Generated Signature:', generatedSignature);
   console.log('Incoming Signature:', signature);
