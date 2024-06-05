@@ -118,17 +118,22 @@ app.post('/order', (req, res) => {
   });
 });
 
-function generateSignature(orderId, secretKey) {
+function generateSignature(orderId) {
   const hmac = crypto.createHmac('sha256', 'EaXIwNI6oDhQX6ul7UjWrv25');
   hmac.update(orderId);
   return hmac.digest('hex');
 }
-
 app.post('/verify', async (req, res) => {
   const { orderId, signature } = req.body;
   console.log('Raw request body:', req.body); 
   
   console.log('Received data:', { orderId, signature });
+
+  // Check if orderId or signature is undefined
+  if (!orderId || !signature) {
+    console.error('orderId or signature is undefined');
+    return res.status(400).json({ status: 'failure', message: 'orderId or signature is undefined' });
+  }
   
   const generatedSignature = generateSignature(orderId);
 
@@ -139,26 +144,23 @@ app.post('/verify', async (req, res) => {
 
   console.log('Verification Succeeded:', verificationSucceeded);
 
+
   if (verificationSucceeded) {
     try {
-      // You need to fetch bookingId and carId from somewhere
-      const bookingId = req.body.bookingId; // For example, assuming it's in the request body
-      const carId = req.body.carId; // Similarly, assuming it's in the request body
-
       const updateBookingParams = {
         TableName: 'Bookings',
         Key: { bookingId },
-        UpdateExpression: 'set #status = :status',
+        UpdateExpression: 'set #status = :status, paymentId = :paymentId',
         ExpressionAttributeNames: {
           '#status': 'status'
         },
         ExpressionAttributeValues: {
-          ':status': 'confirmed'
+          ':status': 'confirmed',
+          ':paymentId': paymentId
         },
         ReturnValues: 'ALL_NEW'
       };
       await dynamoDb.update(updateBookingParams).promise();
-
       const updateCarParams = {
         TableName: 'G7Cars',
         Key: { carId },
@@ -183,7 +185,6 @@ app.post('/verify', async (req, res) => {
     res.status(400).json({ status: 'failure' });
   }
 });
-
 
 
 app.get('/cars', async (req, res) => {
