@@ -118,11 +118,13 @@ app.post('/order', (req, res) => {
   });
 });
 
-const generateSignature = (paymentId, secret, orderId) => {
+const generateSignature = (orderId, paymentId, secret) => {
+  const data = `${orderId}|${paymentId}`;
   const hmac = crypto.createHmac('sha256', secret);
-  hmac.update(paymentId + "|" + orderId); 
+  hmac.update(data);
   return hmac.digest('hex');
 };
+
 
 app.post('/verify', async (req, res) => {
   const { signature, paymentId, orderId} = req.body;
