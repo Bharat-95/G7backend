@@ -9,16 +9,17 @@ const crypto = require('crypto');
 const Razorpay = require('razorpay');
 require('dotenv').config()
 
-
 const upload = multer({
   storage: multer.memoryStorage()
 });
 AWS.config.update({ region: 'us-east-1' });
 const dynamoDb = new AWS.DynamoDB.DocumentClient();
 const tableName = 'G7Cars';
+const bookingsTable = 'Bookings';
 const s3 = new AWS.S3();
 app.use(cors());
 app.use(express.json());
+
 app.post('/cars', upload.fields([
   { name: 'Coverimage', maxCount: 1 },
   { name: 'RcFront', maxCount: 1 },
@@ -33,7 +34,8 @@ app.post('/cars', upload.fields([
   try {
     const item = {
       G7cars123: uuidv4(),
-      ...req.body
+      ...req.body,
+      status: 'available'
     };
 
     const imageFields = ['Coverimage', 'RcFront', 'RcBack', 'AdhaarFront', 'AdhaarBack', 'Insurance', 'Pollution', 'AgreementDoc'];
@@ -69,37 +71,37 @@ app.post('/cars', upload.fields([
 
 app.post('/bookings', async (req, res) => {
   try {
-    const dynamoDb = new AWS.DynamoDB.DocumentClient();
     const { carId, pickupDateTime, dropoffDateTime } = req.body;
-    
     const bookingId = uuidv4();
 
-    const params = {
-      TableName: 'Bookings',
+    const bookingParams = {
+      TableName: bookingsTable,
       Item: {
-        G7cars123: bookingId, 
+        bookingId,
         carId,
         pickupDateTime,
         dropoffDateTime,
-        createdAt: Date.now(),
+        createdAt: new Date().toISOString(),
+        status: 'pending'
       },
     };
-    await dynamoDb.put(params).promise();
+    await dynamoDb.put(bookingParams).promise();
 
-    res.status(200).json({ message: 'Booking successful' });
+    res.status(200).json({ message: 'Booking created, awaiting payment', bookingId });
   } catch (error) {
-    console.error('Error while booking:', error);
-    res.status(500).json({ message: 'Failed to book the car' });
+    console.error('Error while creating booking:', error);
+    res.status(500).json({ message: 'Failed to create booking' });
   }
 });
 
 const rzp = new Razorpay({
   key_id: process.env.RAZORPAY_API_KEY,
-  key_secret: 'EaXIwNI6oDhQX6ul7UjWrv25',
+  key_secret: process.env.RAZORPAY_API_SECRET,
 });
+
 app.post('/order', (req, res) => {
   const options = {
-    amount: req.body.amount * 100, 
+    amount: req.body.amount * 100,
     currency: "INR",
     receipt: "order_rcptid_11"
   };
@@ -118,20 +120,54 @@ app.post('/order', (req, res) => {
 });
 
 function generateSignature(orderId, paymentId) {
-
-  return orderId + paymentId; 
+  return crypto.createHmac('sha256', process.env.RAZORPAY_API_SECRET)
+    .update(orderId + '|' + paymentId)
+    .digest('hex');
 }
 
-app.post('/verify', (req, res) => {
-  const { orderId, paymentId, signature } = req.body;
+app.post('/verify', async (req, res) => {
+  const { orderId, paymentId, signature, bookingId, carId } = req.body;
 
   const generatedSignature = generateSignature(orderId, paymentId);
 
   const verificationSucceeded = generatedSignature === signature;
 
   if (verificationSucceeded) {
-    console.log('Payment verification succeeded');
-    res.status(200).json({ status: 'success' });
+    try {
+      const updateBookingParams = {
+        TableName: bookingsTable,
+        Key: { bookingId },
+        UpdateExpression: 'set #status = :status, paymentId = :paymentId',
+        ExpressionAttributeNames: {
+          '#status': 'status'
+        },
+        ExpressionAttributeValues: {
+          ':status': 'confirmed',
+          ':paymentId': paymentId
+        },
+        ReturnValues: 'ALL_NEW'
+      };
+      await dynamoDb.update(updateBookingParams).promise();
+
+      const updateCarParams = {
+        TableName: tableName,
+        Key: { carId },
+        UpdateExpression: 'set #status = :status',
+        ExpressionAttributeNames: {
+          '#status': 'status'
+        },
+        ExpressionAttributeValues: {
+          ':status': 'booked'
+        },
+        ReturnValues: 'ALL_NEW'
+      };
+      await dynamoDb.update(updateCarParams).promise();
+
+      res.status(200).json({ status: 'success' });
+    } catch (error) {
+      console.error('Error confirming payment and updating status:', error);
+      res.status(500).json({ status: 'failure', message: 'Failed to update booking and car status' });
+    }
   } else {
     console.log('Payment verification failed');
     res.status(400).json({ status: 'failure' });
@@ -150,8 +186,6 @@ app.get('/cars', async (req, res) => {
     res.status(500).send('Unable to fetch data from DynamoDB');
   }
 });
-
-
 
 app.put('/cars/:carNo', async (req, res) => {
   const carNo = req.params.carNo;
@@ -180,8 +214,6 @@ app.put('/cars/:carNo', async (req, res) => {
   }
 });
 
-
-
 app.delete('/cars/:carNo', async (req, res) => {
   const carNo = req.params.carNo;
 
@@ -194,10 +226,8 @@ app.delete('/cars/:carNo', async (req, res) => {
   };
 
   try {
-    
     const carDetails = await dynamoDb.get(params).promise();
     const carData = carDetails.Item;
-
 
     const imageUrls = [];
     for (const key in carData) {
@@ -211,10 +241,8 @@ app.delete('/cars/:carNo', async (req, res) => {
       }
     }
 
-    
     await dynamoDb.delete(params).promise();
 
-  
     await Promise.all(imageUrls.map(async (imageUrl) => {
       const imageKey = getImageKeyFromUrl(imageUrl);
       await s3.deleteObject({ Bucket: 'g7cars', Key: imageKey }).promise();
@@ -235,11 +263,6 @@ function getImageKeyFromUrl(imageUrl) {
   const parts = imageUrl.split('/');
   return parts[parts.length - 1];
 }
-
-
-
-
-
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
