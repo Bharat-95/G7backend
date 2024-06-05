@@ -136,7 +136,9 @@ app.post('/verify', async (req, res) => {
     try {
       const updateBookingParams = {
         TableName: 'Bookings',
-        G7cars123:bookingId,
+        Key: {
+          G7cars123: bookingId,
+        },
         UpdateExpression: 'set #status = :status, paymentId = :paymentId',
         ExpressionAttributeNames: {
           '#status': 'status'
@@ -149,7 +151,21 @@ app.post('/verify', async (req, res) => {
       };
       await dynamoDb.update(updateBookingParams).promise();
       
-      
+      const updateCarParams = {
+        TableName: 'G7Cars',
+        Key: {
+          G7cars123: carId,
+        },
+        UpdateExpression: 'set #status = :status',
+        ExpressionAttributeNames: {
+          '#status': 'status'
+        },
+        ExpressionAttributeValues: {
+          ':status': 'booked'
+        },
+        ReturnValues: 'ALL_NEW'
+      };
+      await dynamoDb.update(updateCarParams).promise();
 
       res.status(200).json({ status: 'success' });
     } catch (error) {
