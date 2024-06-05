@@ -124,8 +124,9 @@ const generateSignature = (paymentId, secret) => {
   return hmac.digest('hex');
 };
 app.post('/verify', async (req, res) => {
-  const { signature, paymentId } = req.body;
+  const { signature, paymentId, razorpay_order_id } = req.body;
   console.log('Raw request body:', req.body); 
+  console.log(razorpay_order_id)
   
   console.log('Received signature:', signature);
   console.log('Payment Id', paymentId);
