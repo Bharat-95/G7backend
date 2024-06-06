@@ -84,7 +84,6 @@ app.post('/cars', upload.fields([
     res.status(500).send('Unable to post details to DynamoDB');
   }
 });
-
 const rzp = new Razorpay({
   key_id: process.env.RAZORPAY_API_KEY,
   key_secret: 'EaXIwNI6oDhQX6ul7UjWrv25',
@@ -116,7 +115,6 @@ const generateSignature = (paymentId, orderId, secret) => {
   const signature = hmac.digest('hex');
   return signature;
 };
-
 app.post('/verify', async (req, res) => {
   const { paymentId, orderId, signature: razorpay_signature, carId, pickupDateTime, dropoffDateTime } = req.body;
 
