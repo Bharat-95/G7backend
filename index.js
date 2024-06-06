@@ -27,10 +27,10 @@ async function sendWhatsAppMessage(to, body) {
   try {
     await twilioClient.messages.create({
       from: 'whatsapp:' + '+14155238886',
-      to: 'whatsapp:' + '+919640019664',
+      to: 'whatsapp:' + to,
       body: body
     });
-   
+    console.log('WhatsApp message sent successfully');
   } catch (error) {
     console.error('Error sending WhatsApp message:', error);
   }
@@ -158,7 +158,7 @@ app.post('/verify', async (req, res) => {
 
 
       await sendWhatsAppMessage('+919640019664', messageBody);
-      await sendWhatsAppMessage('+917993291554', messageBody);      
+      await sendWhatsAppMessage('+917993291554', messageBody);
 
       res.status(200).json({ status: 'success' });
     } catch (error) {
