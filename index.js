@@ -103,8 +103,8 @@ const generateSignature = (paymentId, orderId, secret) => {
 };
 
 app.post('/verify', async (req, res) => {
-  const { paymentId, orderId, signature: razorpay_signature, carId } = req.body;
-  const { pickupDate, dropDate } = req.body;
+  const { paymentId, orderId, signature: razorpay_signature, carId, pickupDate, dropDate } = req.body;
+
 
   console.log('pickup', pickupDate )
   console.log('drop', dropDate)
@@ -129,8 +129,6 @@ app.post('/verify', async (req, res) => {
         },
       };
       await dynamoDb.put(createBookingParams).promise();
-
-      
 
       res.status(200).json({ status: 'success' });
     } catch (error) {
