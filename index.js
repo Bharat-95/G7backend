@@ -128,7 +128,9 @@ app.post('/verify', async (req, res) => {
       await dynamoDb.put(createBookingParams).promise();
       const updateCarParams = {
         TableName: 'G7Cars',
-        Key: G7cars123,
+        Key: {
+          G7cars123: orderId,
+        },
         UpdateExpression: 'set #availability = :availability',
         ExpressionAttributeNames: {
           '#availability': 'Availability'
