@@ -27,10 +27,10 @@ async function sendWhatsAppMessage(to, body) {
   try {
     await twilioClient.messages.create({
       from: 'whatsapp:' + '+14155238886',
-      to: 'whatsapp:' + '919640019664',
+      to: 'whatsapp:' + '+919640019664',
       body: body
     });
-    console.log('WhatsApp message sent successfully');
+   
   } catch (error) {
     console.error('Error sending WhatsApp message:', error);
   }
