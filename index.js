@@ -71,7 +71,7 @@ app.post('/cars', upload.fields([
 
 const rzp = new Razorpay({
   key_id: process.env.RAZORPAY_API_KEY,
-  key_secret: process.env.RAZORPAY_API_SECRET,
+  key_secret: 'EaXIwNI6oDhQX6ul7UjWrv25',
 });
 app.post('/order', (req, res) => {
   const options = {
@@ -104,7 +104,7 @@ const generateSignature = (paymentId, orderId, secret) => {
 app.post('/verify', async (req, res) => {
   const { paymentId, orderId, signature: razorpay_signature, carId, pickupDateTime, dropoffDateTime } = req.body;
 
-  const secret = process.env.RAZORPAY_API_SECRET;
+  const secret = 'EaXIwNI6oDhQX6ul7UjWrv25';
   const generated_signature = generateSignature(paymentId, orderId, secret);
   const verificationSucceeded = (generated_signature === razorpay_signature);
 
