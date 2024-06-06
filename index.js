@@ -157,7 +157,7 @@ app.post('/verify', async (req, res) => {
       const messageBody = `Booking confirmed! \nBooking ID: ${bookingId}\nCar ID: ${carId}\nPickup DateTime: ${pickupDateTime}\nDropoff DateTime: ${dropoffDateTime}`;
 
 
-      await sendWhatsAppMessage(userPhoneNumber, messageBody);
+      await sendWhatsAppMessage('whatsapp:+919640019664', messageBody);
       console.log(userPhoneNumber)
       await sendWhatsAppMessage('whatsapp:+917993291554', messageBody);
 
