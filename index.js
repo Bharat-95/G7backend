@@ -105,7 +105,6 @@ const generateSignature = (paymentId, orderId, secret) => {
 app.post('/verify', async (req, res) => {
   const { paymentId, orderId, signature: razorpay_signature, carId, pickupDateTime, dropoffDateTime } = req.body;
 
-
   console.log('pickup', pickupDateTime )
   console.log('drop', dropoffDateTime)
   const secret = 'EaXIwNI6oDhQX6ul7UjWrv25'; 
@@ -139,6 +138,10 @@ app.post('/verify', async (req, res) => {
     console.log('Payment verification failed');
     res.status(400).json({ status: 'failure' });
   }
+});
+
+app.listen(3000, () => {
+  console.log('Server is running on port 3000');
 });
 
 app.get('/cars', async (req, res) => {
