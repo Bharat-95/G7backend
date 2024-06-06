@@ -116,6 +116,7 @@ app.post('/verify', async (req, res) => {
         Item: {
           G7cars123: orderId,
           carId,
+          bookingId,
           pickupDateTime,
           dropoffDateTime,
           createdAt: new Date().toISOString(),
