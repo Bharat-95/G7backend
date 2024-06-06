@@ -134,7 +134,35 @@ app.post('/verify', async (req, res) => {
 
   if (verificationSucceeded) {
     try {
-           
+      // Update booking status
+      const updateBookingParams = {
+        TableName: 'Bookings',
+        Key: { G7cars123: orderId },
+        UpdateExpression: 'set #status = :status',
+        ExpressionAttributeNames: {
+          '#status': 'status'
+        },
+        ExpressionAttributeValues: {
+          ':status': 'confirmed'
+        },
+        ReturnValues: 'ALL_NEW'
+      };
+      await dynamoDb.update(updateBookingParams).promise();
+
+      const updateCarParams = {
+        TableName: 'G7Cars',
+        Key: { G7cars123: req.body.carId },
+        UpdateExpression: 'set #availability = :availability',
+        ExpressionAttributeNames: {
+          '#availability': 'Availability'
+        },
+        ExpressionAttributeValues: {
+          ':availability': 'Booked'
+        },
+        ReturnValues: 'ALL_NEW'
+      };
+      await dynamoDb.update(updateCarParams).promise();
+
       res.status(200).json({ status: 'success' });
     } catch (error) {
       console.error('Error confirming payment and updating status:', error);
