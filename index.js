@@ -131,12 +131,14 @@ app.post('/verify', async (req, res) => {
   const secret = 'EaXIwNI6oDhQX6ul7UjWrv25'; 
   const generated_signature = generateSignature(paymentId, orderId, secret);
   const verificationSucceeded = (generated_signature === razorpay_signature);
+  console.log('Generated Signature:', generated_signature);
+  console.log('Received Signature:', razorpay_signature);
 
   if (verificationSucceeded) {
     try {
       const updateBookingParams = {
         TableName: 'Bookings',
-        Key: G7cars123,
+        Key: { bookingId: bookingId },
         UpdateExpression: 'set #status = :status, paymentId = :paymentId',
         ExpressionAttributeNames: {
           '#status': 'status'
@@ -148,8 +150,20 @@ app.post('/verify', async (req, res) => {
         ReturnValues: 'ALL_NEW'
       };
       await dynamoDb.update(updateBookingParams).promise();
-      
-      
+      const carNo = req.params.carNo;
+      const updateCarParams = {
+        TableName: 'G7Cars',
+        Key: { G7cars123: G7cars123 },
+        UpdateExpression: 'set #status = :status',
+        ExpressionAttributeNames: {
+          '#status': 'status'
+        },
+        ExpressionAttributeValues: {
+          ':status': 'booked'
+        },
+        ReturnValues: 'ALL_NEW'
+      };
+      await dynamoDb.update(updateCarParams).promise();
 
       res.status(200).json({ status: 'success' });
     } catch (error) {
