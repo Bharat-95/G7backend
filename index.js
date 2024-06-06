@@ -27,7 +27,7 @@ async function sendWhatsAppMessage(to, body) {
   try {
     await twilioClient.messages.create({
       from: 'whatsapp:' + '+14155238886',
-      to: 'whatsapp:' + to,
+      to: 'whatsapp:' + '919640019664',
       body: body
     });
     console.log('WhatsApp message sent successfully');
@@ -157,8 +157,8 @@ app.post('/verify', async (req, res) => {
       const messageBody = `Booking confirmed! \nBooking ID: ${bookingId}\nCar ID: ${carId}\nPickup DateTime: ${pickupDateTime}\nDropoff DateTime: ${dropoffDateTime}`;
 
 
-      await sendWhatsAppMessage('whatsapp:+919640019664', messageBody);
-      await sendWhatsAppMessage('whatsapp:+917993291554', messageBody);      
+      await sendWhatsAppMessage('+919640019664', messageBody);
+      await sendWhatsAppMessage('+917993291554', messageBody);      
 
       res.status(200).json({ status: 'success' });
     } catch (error) {
