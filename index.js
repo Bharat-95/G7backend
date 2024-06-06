@@ -134,10 +134,9 @@ app.post('/verify', async (req, res) => {
 
   if (verificationSucceeded) {
     try {
-      // Update booking status
       const updateBookingParams = {
         TableName: 'Bookings',
-        Key: { G7cars123: orderId },
+        Key: { G7cars123: carId },
         UpdateExpression: 'set #status = :status',
         ExpressionAttributeNames: {
           '#status': 'status'
@@ -151,7 +150,7 @@ app.post('/verify', async (req, res) => {
 
       const updateCarParams = {
         TableName: 'G7Cars',
-        Key: { G7cars123: req.body.carId },
+        Key: { carNo: req.body.carNo },
         UpdateExpression: 'set #availability = :availability',
         ExpressionAttributeNames: {
           '#availability': 'Availability'
