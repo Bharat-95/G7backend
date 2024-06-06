@@ -68,30 +68,6 @@ app.post('/cars', upload.fields([
   }
 });
 
-app.post('/bookings', async (req, res) => {
-  try {
-    const { carId, pickupDateTime, dropoffDateTime } = req.body;
-    const bookingId = uuidv4();
-
-    const bookingParams = {
-      TableName: 'Bookings',
-      Item: {
-        G7cars123:bookingId,
-        carId,
-        pickupDateTime,
-        dropoffDateTime,
-        createdAt: new Date().toISOString(),
-        status: 'pending'
-      },
-    };
-    await dynamoDb.put(bookingParams).promise();
-
-    res.status(200).json({ message: 'Booking created, awaiting payment', bookingId });
-  } catch (error) {
-    console.error('Error while creating booking:', error);
-    res.status(500).json({ message: 'Failed to create booking' });
-  }
-});
 
 
 const rzp = new Razorpay({
@@ -127,28 +103,41 @@ const generateSignature = (paymentId, orderId, secret) => {
 };
 
 app.post('/verify', async (req, res) => {
-  const { paymentId, orderId, signature: razorpay_signature } = req.body;
+  const { paymentId, orderId, signature: razorpay_signature, carId, pickupDateTime, dropoffDateTime } = req.body;
   const secret = 'EaXIwNI6oDhQX6ul7UjWrv25'; 
   const generated_signature = generateSignature(paymentId, orderId, secret);
   const verificationSucceeded = (generated_signature === razorpay_signature);
 
   if (verificationSucceeded) {
     try {
-      const updateBookingParams = {
+      const bookingId = uuidv4();
+      const createBookingParams = {
         TableName: 'Bookings',
-        Key: { G7cars123: orderId },
-        UpdateExpression: 'set #status = :status',
+        Item: {
+          G7cars123: bookingId,
+          carId,
+          pickupDateTime,
+          dropoffDateTime,
+          createdAt: new Date().toISOString(),
+          status: 'confirmed',
+          paymentId: paymentId
+        },
+      };
+      await dynamoDb.put(createBookingParams).promise();
+
+      const updateCarParams = {
+        TableName: 'G7Cars',
+        Key: { G7cars123: carId },
+        UpdateExpression: 'set #availability = :availability',
         ExpressionAttributeNames: {
-          '#status': 'status'
+          '#availability': 'Availability'
         },
         ExpressionAttributeValues: {
-          ':status': 'confirmed'
+          ':availability': 'Booked'
         },
         ReturnValues: 'ALL_NEW'
       };
-      await dynamoDb.update(updateBookingParams).promise();
-
-      
+      await dynamoDb.update(updateCarParams).promise();
 
       res.status(200).json({ status: 'success' });
     } catch (error) {
