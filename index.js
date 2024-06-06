@@ -128,6 +128,8 @@ const generateSignature = (paymentId, orderId, secret) => {
 
 app.post('/verify', async (req, res) => {
   const { paymentId, orderId, signature: razorpay_signature, bookingId, carId } = req.body;
+  console.log('CarId', carId)
+  console.log('bookingId', bookingId)
   const secret = 'EaXIwNI6oDhQX6ul7UjWrv25'; 
   const generated_signature = generateSignature(paymentId, orderId, secret);
   const verificationSucceeded = (generated_signature === razorpay_signature);
