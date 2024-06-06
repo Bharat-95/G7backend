@@ -134,19 +134,7 @@ app.post('/verify', async (req, res) => {
 
   if (verificationSucceeded) {
     try {
-      const updateBookingParams = {
-        TableName: 'Bookings',
-        Key: { G7cars123: carId },
-        UpdateExpression: 'set #status = :status',
-        ExpressionAttributeNames: {
-          '#status': 'status'
-        },
-        ExpressionAttributeValues: {
-          ':status': 'confirmed'
-        },
-        ReturnValues: 'ALL_NEW'
-      };
-      await dynamoDb.update(updateBookingParams).promise();
+     
 
       const updateCarParams = {
         TableName: 'G7Cars',
