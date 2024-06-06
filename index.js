@@ -21,12 +21,12 @@ const s3 = new AWS.S3();
 app.use(cors());
 app.use(express.json());
 
-const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+const twilioClient = twilio('AC1f39abf23cbe3d99676f15fadc70c59f', '09110c729d5319ae195ab96b219f2520');
 
 async function sendWhatsAppMessage(to, body) {
   try {
     await twilioClient.messages.create({
-      from: 'whatsapp:' + process.env.TWILIO_WHATSAPP_NUMBER,
+      from: 'whatsapp:' + '+14155238886',
       to: 'whatsapp:' + to,
       body: body
     });
