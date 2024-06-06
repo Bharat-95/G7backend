@@ -130,7 +130,7 @@ app.post('/verify', async (req, res) => {
       const updateCarParams = {
         TableName: 'G7Cars',
         Key: {
-          G7cars123: orderId,
+          G7cars123: carId,
         },
         UpdateExpression: 'set #availability = :availability',
         ExpressionAttributeNames: {
