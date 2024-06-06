@@ -21,7 +21,7 @@ const s3 = new AWS.S3();
 app.use(cors());
 app.use(express.json());
 
-const twilioClient = twilio('AC1f39abf23cbe3d99676f15fadc70c59f', '09110c729d5319ae195ab96b219f2520');
+const twilioClient = twilio('AC1f39abf23cbe3d99676f15fadc70c59f', '6e2377cc97d6b3236a46f68c124fbf11');
 
 async function sendWhatsAppMessage(to, body) {
   try {
