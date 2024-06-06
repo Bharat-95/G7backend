@@ -7,8 +7,8 @@ const { v4: uuidv4 } = require('uuid');
 const multer = require('multer');
 const crypto = require('crypto');
 const Razorpay = require('razorpay');
+const cron = require('node-cron');
 require('dotenv').config()
-
 
 const upload = multer({
   storage: multer.memoryStorage()
@@ -19,6 +19,7 @@ const tableName = 'G7Cars';
 const s3 = new AWS.S3();
 app.use(cors());
 app.use(express.json());
+
 app.post('/cars', upload.fields([
   { name: 'Coverimage', maxCount: 1 },
   { name: 'RcFront', maxCount: 1 },
@@ -40,7 +41,7 @@ app.post('/cars', upload.fields([
     const imageFields = ['Coverimage', 'RcFront', 'RcBack', 'AdhaarFront', 'AdhaarBack', 'Insurance', 'Pollution', 'AgreementDoc'];
     for (const field of imageFields) {
       if (req.files[field] && req.files[field].length > 0) {
-        const images = req.files[field]; 
+        const images = req.files[field];
         const imageUrls = [];
         for (const image of images) {
           const params = {
@@ -68,20 +69,18 @@ app.post('/cars', upload.fields([
   }
 });
 
-
-
 const rzp = new Razorpay({
   key_id: process.env.RAZORPAY_API_KEY,
-  key_secret: 'EaXIwNI6oDhQX6ul7UjWrv25',
+  key_secret: process.env.RAZORPAY_API_SECRET,
 });
 app.post('/order', (req, res) => {
   const options = {
-    amount: req.body.amount * 100, 
+    amount: req.body.amount * 100,
     currency: "INR",
     receipt: "order_rcptid_11"
   };
-  
-  rzp.orders.create(options, function(err, order) {
+
+  rzp.orders.create(options, function (err, order) {
     if (err) {
       console.error('Error creating order:', err);
       res.status(500).json({
@@ -104,9 +103,8 @@ const generateSignature = (paymentId, orderId, secret) => {
 
 app.post('/verify', async (req, res) => {
   const { paymentId, orderId, signature: razorpay_signature, carId, pickupDateTime, dropoffDateTime } = req.body;
-  console.log('carId', carId)
 
-  const secret = 'EaXIwNI6oDhQX6ul7UjWrv25'; 
+  const secret = process.env.RAZORPAY_API_SECRET;
   const generated_signature = generateSignature(paymentId, orderId, secret);
   const verificationSucceeded = (generated_signature === razorpay_signature);
 
@@ -154,7 +152,6 @@ app.post('/verify', async (req, res) => {
   }
 });
 
-
 app.get('/cars', async (req, res) => {
   try {
     const params = {
@@ -168,8 +165,6 @@ app.get('/cars', async (req, res) => {
   }
 });
 
-
-
 app.put('/cars/:carNo', async (req, res) => {
   const carNo = req.params.carNo;
 
@@ -177,14 +172,14 @@ app.put('/cars/:carNo', async (req, res) => {
     const params = {
       TableName: tableName,
       Key: {
-        carNo: carNo 
+        carNo: carNo
       },
       UpdateExpression: 'set #attr1 = :val1',
       ExpressionAttributeNames: {
-        '#attr1': 'exampleAttribute' 
+        '#attr1': 'exampleAttribute'
       },
       ExpressionAttributeValues: {
-        ':val1': req.body.exampleAttribute 
+        ':val1': req.body.exampleAttribute
       },
       ReturnValues: 'ALL_NEW'
     };
@@ -196,8 +191,6 @@ app.put('/cars/:carNo', async (req, res) => {
     res.status(500).send('Unable to update car data');
   }
 });
-
-
 
 app.delete('/cars/:carNo', async (req, res) => {
   const carNo = req.params.carNo;
@@ -211,10 +204,8 @@ app.delete('/cars/:carNo', async (req, res) => {
   };
 
   try {
-    
     const carDetails = await dynamoDb.get(params).promise();
     const carData = carDetails.Item;
-
 
     const imageUrls = [];
     for (const key in carData) {
@@ -228,10 +219,8 @@ app.delete('/cars/:carNo', async (req, res) => {
       }
     }
 
-    
     await dynamoDb.delete(params).promise();
 
-  
     await Promise.all(imageUrls.map(async (imageUrl) => {
       const imageKey = getImageKeyFromUrl(imageUrl);
       await s3.deleteObject({ Bucket: 'g7cars', Key: imageKey }).promise();
@@ -254,9 +243,51 @@ function getImageKeyFromUrl(imageUrl) {
 }
 
 
+async function updateCarAvailability() {
+  try {
+    const now = new Date().toISOString();
+
+    const bookingParams = {
+      TableName: 'Bookings',
+      FilterExpression: 'dropoffDateTime <= :now AND #status = :status',
+      ExpressionAttributeValues: {
+        ':now': now,
+        ':status': 'confirmed'
+      },
+      ExpressionAttributeNames: {
+        '#status': 'status'
+      }
+    };
+    const bookingsData = await dynamoDb.scan(bookingParams).promise();
 
 
+    for (const booking of bookingsData.Items) {
+      const updateCarParams = {
+        TableName: 'G7Cars',
+        Key: {
+          G7cars123: booking.carId,
+        },
+        UpdateExpression: 'set #availability = :availability',
+        ExpressionAttributeNames: {
+          '#availability': 'Availability'
+        },
+        ExpressionAttributeValues: {
+          ':availability': 'Available'
+        },
+        ReturnValues: 'ALL_NEW'
+      };
+      await dynamoDb.update(updateCarParams).promise();
+    }
 
+    console.log('Car availability updated successfully');
+  } catch (error) {
+    console.error('Error updating car availability:', error);
+  }
+}
+cron.schedule('0 * * * *', () => {
+  console.log('Running scheduled task to update car availability');
+  updateCarAvailability();
+});
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
