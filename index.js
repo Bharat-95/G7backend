@@ -20,11 +20,13 @@ const tableName = 'G7Cars';
 const s3 = new AWS.S3();
 app.use(cors());
 app.use(express.json());
-const twilioClient = twilio('AC1f39abf23cbe3d99676f15fadc70c59f', '09110c729d5319ae195ab96b219f2520');
+
+const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+
 async function sendWhatsAppMessage(to, body) {
   try {
     await twilioClient.messages.create({
-      from: 'whatsapp:' + '+14155238886',
+      from: 'whatsapp:' + process.env.TWILIO_WHATSAPP_NUMBER,
       to: 'whatsapp:' + to,
       body: body
     });
@@ -155,8 +157,11 @@ app.post('/verify', async (req, res) => {
       };
       await dynamoDb.update(updateCarParams).promise();
       const messageBody = `Booking confirmed! \nBooking ID: ${bookingId}\nCar ID: ${carId}\nPickup DateTime: ${pickupDateTime}\nDropoff DateTime: ${dropoffDateTime}`;
+
+
       await sendWhatsAppMessage(userPhoneNumber, messageBody);
-      await sendWhatsAppMessage('whatsapp:+917993291554', messageBody);
+      await sendWhatsAppMessage('whatsapp:+919640019664', messageBody);
+
       res.status(200).json({ status: 'success' });
     } catch (error) {
       console.error('Error confirming payment and updating status:', error);
