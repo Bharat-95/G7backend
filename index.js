@@ -114,7 +114,7 @@ app.post('/verify', async (req, res) => {
       const createBookingParams = {
         TableName: 'Bookings',
         Item: {
-          G7cars123: bookingId,
+          G7cars123: orderId,
           carId,
           pickupDateTime,
           dropoffDateTime,
