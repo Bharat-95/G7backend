@@ -158,7 +158,6 @@ app.post('/verify', async (req, res) => {
 
 
       await sendWhatsAppMessage('whatsapp:+919640019664', messageBody);
-      console.log(userPhoneNumber)
       await sendWhatsAppMessage('whatsapp:+917993291554', messageBody);
 
       res.status(200).json({ status: 'success' });
