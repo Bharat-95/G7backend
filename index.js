@@ -23,15 +23,20 @@ const s3 = new AWS.S3();
 app.use(cors());
 app.use(express.json());
 
-const twilioClient = twilio('AC1f39abf23cbe3d99676f15fadc70c59f', '6e2377cc97d6b3236a46f68c124fbf11');
+const accountSid = 'AC1f39abf23cbe3d99676f15fadc70c59f';
+const authToken = '6e2377cc97d6b3236a46f68c124fbf11';
+const client = require('twilio')(accountSid, authToken);
 
 async function sendWhatsAppMessage(to, body) {
   try {
-    await twilioClient.messages.create({
-      from: 'whatsapp:' + '+14155238886',
-      to: `whatsapp:${to}`,
-      body: body
-    });
+    client.messages
+    .create({
+        body: 'Your appointment is coming up on July 21 at 3PM',
+        from: 'whatsapp:+14155238886',
+        to: 'whatsapp:+917993291554'
+    })
+    .then(message => console.log(message.sid))
+    .done();
     console.log('WhatsApp message sent successfully');
   } catch (error) {
     console.error('Error sending WhatsApp message:', error);
