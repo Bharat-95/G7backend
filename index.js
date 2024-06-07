@@ -181,20 +181,21 @@ app.post('/verify', async (req, res) => {
       
       const messageBody = `Your booking has been confirmed! Here are the details:\n\nBooking ID: ${bookingId}\nPayment ID: ${paymentId}\nPickup Date: ${pickupDateTimeIST}\nDrop-off Date: ${dropoffDateTimeIST}\n\nThank you for choosing us!`;
 
-      const ownerNumber = '+919000640052';
-      
-      await client.messages.create({
-        body: messageBody,
-        from: 'whatsapp:+14155238886',
-        to:'whatsapp:+919640019664',
-        to: `whatsapp:${userPhoneNumber}`,
-      });
+      const ownerNumber ='+919000640052';
 
       await client.messages.create({
         body: messageBody,
         from: 'whatsapp:+14155238886',
         to:`whatsapp:${ownerNumber}`,
       });
+      
+      await client.messages.create({
+        body: messageBody,
+        from: 'whatsapp:+14155238886',
+        to: `whatsapp:${userPhoneNumber}`,
+      });
+
+     
 
       res.status(200).json({ status: 'success' });
     } catch (error) {
