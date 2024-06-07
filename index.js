@@ -11,29 +11,25 @@ const cron = require('node-cron');
 const twilio = require('twilio');
 require('dotenv').config();
 
-// Configure AWS
-AWS.config.update({ region: 'us-east-1' });
-const dynamoDb = new AWS.DynamoDB.DocumentClient();
-const s3 = new AWS.S3();
-
-// Configure Twilio
-const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-
-// Multer configuration for file uploads
 const upload = multer({
   storage: multer.memoryStorage()
 });
 
-// Middleware
+AWS.config.update({ region: 'us-east-1' });
+const dynamoDb = new AWS.DynamoDB.DocumentClient();
+const tableName = 'G7Cars';
+const s3 = new AWS.S3();
+
 app.use(cors());
 app.use(express.json());
 
-// Function to send WhatsApp message using Twilio
+const twilioClient = twilio('AC1f39abf23cbe3d99676f15fadc70c59f', '6e2377cc97d6b3236a46f68c124fbf11');
+
 async function sendWhatsAppMessage(to, body) {
   try {
     await twilioClient.messages.create({
-      from: `whatsapp:${process.env.TWILIO_PHONE_NUMBER}`,
-      to: `whatsapp:${to}`,
+      from: 'whatsapp:' + '+14155238886',
+      to: 'whatsapp:' + to,
       body: body
     });
     console.log('WhatsApp message sent successfully');
@@ -42,7 +38,6 @@ async function sendWhatsAppMessage(to, body) {
   }
 }
 
-// Endpoint to upload car details and images
 app.post('/cars', upload.fields([
   { name: 'Coverimage', maxCount: 1 },
   { name: 'RcFront', maxCount: 1 },
@@ -55,17 +50,12 @@ app.post('/cars', upload.fields([
   { name: 'AgreementDoc', maxCount: 1 }
 ]), async (req, res) => {
   try {
-    // Generate unique ID for the car
-    const carId = uuidv4();
-
-    // Prepare car item with initial status 'Available'
-    const carItem = {
-      G7cars123: carId,
+    const item = {
+      G7cars123: uuidv4(),
       ...req.body,
       status: 'Available'
     };
 
-    // Upload images to S3 and store URLs in car item
     const imageFields = ['Coverimage', 'RcFront', 'RcBack', 'AdhaarFront', 'AdhaarBack', 'Insurance', 'Pollution', 'AgreementDoc'];
     for (const field of imageFields) {
       if (req.files[field] && req.files[field].length > 0) {
@@ -80,17 +70,16 @@ app.post('/cars', upload.fields([
           const data = await s3.upload(params).promise();
           imageUrls.push(data.Location);
         }
-        carItem[field] = imageUrls;
+        item[field] = imageUrls;
       }
     }
 
-    // Save car details to DynamoDB
     const params = {
-      TableName: 'G7Cars',
-      Item: carItem,
+      TableName: tableName,
+      Item: item,
     };
-    await dynamoDb.put(params).promise();
 
+    await dynamoDb.put(params).promise();
     res.status(200).send('Uploaded data and images successfully');
   } catch (error) {
     console.error('Unable to post details', error);
@@ -98,13 +87,11 @@ app.post('/cars', upload.fields([
   }
 });
 
-// Configure Razorpay
 const rzp = new Razorpay({
   key_id: process.env.RAZORPAY_API_KEY,
-  key_secret: process.env.RAZORPAY_API_SECRET,
+  key_secret: 'EaXIwNI6oDhQX6ul7UjWrv25',
 });
 
-// Endpoint to create order
 app.post('/order', (req, res) => {
   const options = {
     amount: req.body.amount * 100,
@@ -125,7 +112,6 @@ app.post('/order', (req, res) => {
   });
 });
 
-// Function to generate signature for payment verification
 const generateSignature = (paymentId, orderId, secret) => {
   const data = `${orderId}|${paymentId}`;
   const hmac = crypto.createHmac('sha256', secret);
@@ -134,14 +120,12 @@ const generateSignature = (paymentId, orderId, secret) => {
   return signature;
 };
 
-// Endpoint to verify payment
 app.post('/verify', async (req, res) => {
   const { paymentId, orderId, signature: razorpay_signature, carId, pickupDateTime, dropoffDateTime } = req.body;
 
-  const secret = process.env.RAZORPAY_API_SECRET;
+  const secret = 'EaXIwNI6oDhQX6ul7UjWrv25';
   const generated_signature = generateSignature(paymentId, orderId, secret);
   const verificationSucceeded = (generated_signature === razorpay_signature);
-
 
   if (verificationSucceeded) {
     try {
@@ -342,20 +326,14 @@ async function updateCarAvailability() {
   }
 }
 
-function isCarAvailable(car, pickupDateTime, dropoffDateTime) {
+function isCarAvailableForTimeSlot(car, pickupDateTime, dropoffDateTime) {
   const bookings = car.bookings || [];
   const pickupTime = new Date(pickupDateTime);
   const dropoffTime = new Date(dropoffDateTime);
 
-  console.log('pickup',pickupTime)
-  console.log('drop',dropoffTime)
-
   for (const booking of bookings) {
     const bookingPickupTime = new Date(booking.pickupDateTime);
     const bookingDropoffTime = new Date(booking.dropoffDateTime);
-
-    console.log(bookingPickupTime)
-    console.log(bookingDropoffTime)
 
     if (
       (pickupTime >= bookingPickupTime && pickupTime < bookingDropoffTime) ||
@@ -363,13 +341,6 @@ function isCarAvailable(car, pickupDateTime, dropoffDateTime) {
       (pickupTime <= bookingPickupTime && dropoffTime >= bookingDropoffTime)
     ) {
       return false;
-    }
-  }
-
-  if (bookings.length > 0) {
-    const lastBooking = bookings[bookings.length - 1];
-    if (new Date() >= new Date(lastBooking.dropoffDateTime)) {
-      return true;
     }
   }
 
