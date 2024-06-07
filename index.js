@@ -128,7 +128,9 @@ const generateSignature = (paymentId, orderId, secret) => {
 };
 
 app.post('/verify', async (req, res) => {
-  const { paymentId, orderId, signature: razorpay_signature, carId, pickupDateTime, dropoffDateTime } = req.body;
+  const { paymentId, orderId, signature: razorpay_signature, carId, pickupDateTime, dropoffDateTime, phoneNumber } = req.body;
+
+  console.log(req.body)
 
   const secret = 'EaXIwNI6oDhQX6ul7UjWrv25';
   const generated_signature = generateSignature(paymentId, orderId, secret);
@@ -146,6 +148,7 @@ app.post('/verify', async (req, res) => {
         status: 'confirmed',
         paymentId: paymentId
       };
+    
 
       const updateParams = {
         TableName: tableName,
@@ -163,6 +166,15 @@ app.post('/verify', async (req, res) => {
 
       await dynamoDb.update(updateParams).promise();
 
+      // Construct WhatsApp message body
+      const messageBody = `Your booking has been confirmed! Here are the details:\n\nBooking ID: ${bookingId}\nPayment ID: ${paymentId}\nPickup Date: ${pickupDateTime}\nDrop-off Date: ${dropoffDateTime}\n\nThank you for choosing us!`;
+
+      // Send WhatsApp message
+      await client.messages.create({
+        body: messageBody,
+        from: 'whatsapp:+14155238886',
+        to: `whatsapp:${phoneNumber}`,
+      });
 
       res.status(200).json({ status: 'success' });
     } catch (error) {
@@ -174,7 +186,6 @@ app.post('/verify', async (req, res) => {
     res.status(400).json({ status: 'failure' });
   }
 });
-
 app.get('/cars', async (req, res) => {
   try {
     const { pickupDateTime, dropoffDateTime } = req.query;
