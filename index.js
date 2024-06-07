@@ -308,8 +308,6 @@ function isCarAvailable(car, pickupDateTime, dropoffDateTime) {
       (dropoffTime > bookingPickupTime && dropoffTime <= bookingDropoffTime) ||
       (pickupTime <= bookingPickupTime && dropoffTime >= bookingDropoffTime)
     ) {
-
-      return false;
     }
   }
 
