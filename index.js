@@ -303,6 +303,9 @@ function isCarAvailable(car, pickupDateTime, dropoffDateTime) {
     const bookingPickupTime = new Date(booking.pickupDateTime);
     const bookingDropoffTime = new Date(booking.dropoffDateTime);
 
+    console.log(bookingPickupTime)
+    console.log(bookingDropoffTime)
+
     if (
       (pickupTime >= bookingPickupTime && pickupTime < bookingDropoffTime) ||
       (dropoffTime > bookingPickupTime && dropoffTime <= bookingDropoffTime) ||
