@@ -169,26 +169,18 @@ app.post('/verify', async (req, res) => {
 
 app.get('/cars', async (req, res) => {
   try {
+    // Parse pickup and drop date parameters from the URL query
     const { pickupDateTime, dropoffDateTime } = req.query;
-    const bookingParams = {
-      TableName: 'G7Cars',
-      FilterExpression: '(pickupDateTime < :dropoffDateTime AND dropoffDateTime > :pickupDateTime)',
-      ExpressionAttributeValues: {
-        ':pickupDateTime': { S: pickupDateTime },
-        ':dropoffDateTime': { S: dropoffDateTime }
-      }
-    };
 
-    const bookingsData = await dynamoDb.scan(bookingParams).promise();
+    // Query cars from the database
     const carsData = await dynamoDb.scan({ TableName: tableName }).promise();
     const cars = carsData.Items;
+
+    // Filter out cars that are not available for the specified pickup and dropoff date and time
     const availableCars = cars.filter(car => {
-      for (const booking of bookingsData.Items) {
-        if (car.G7cars123 === booking.carId) {
-          return false; 
-        }
-      }
-      return true; 
+      // Check if the car is available for the specified date and time range
+      const isAvailable = isCarAvailable(car, pickupDateTime, dropoffDateTime);
+      return isAvailable;
     });
 
     res.json(availableCars);
@@ -197,6 +189,31 @@ app.get('/cars', async (req, res) => {
     res.status(500).send('Unable to fetch available cars');
   }
 });
+
+function isCarAvailable(car, pickupDateTime, dropoffDateTime) {
+  // Check if the car is booked for the specified date and time range
+  const bookings = car.Bookings || []; // Assuming booking information is stored in a property named 'Bookings'
+  for (const booking of bookings) {
+    const bookingPickupDateTime = new Date(booking.pickupDateTime);
+    const bookingDropoffDateTime = new Date(booking.dropoffDateTime);
+    if (
+      (pickupDateTime >= bookingPickupDateTime && pickupDateTime < bookingDropoffDateTime) ||
+      (dropoffDateTime > bookingPickupDateTime && dropoffDateTime <= bookingDropoffDateTime) ||
+      (pickupDateTime <= bookingPickupDateTime && dropoffDateTime >= bookingDropoffDateTime)
+    ) {
+      return false; // Car is not available for the specified date and time range
+    }
+  }
+  
+  // Check if the current time is after the dropoffDateTime of the last booking
+  const lastBooking = bookings[bookings.length - 1];
+  if (lastBooking && new Date() >= new Date(lastBooking.dropoffDateTime)) {
+    return false; // Car is not available as it has passed the last booking's dropoffDateTime
+  }
+
+  return true; // Car is available for the specified date and time range
+}
+
 
 
 app.put('/cars/:carNo', async (req, res) => {
