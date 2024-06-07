@@ -124,21 +124,6 @@ app.post('/verify', async (req, res) => {
 
   if (verificationSucceeded) {
     try {
-      const checkOverlapParams = {
-        TableName: 'Bookings',
-        FilterExpression: 'carId = :carId AND ((pickupDateTime BETWEEN :pickup AND :dropoff) OR (dropoffDateTime BETWEEN :pickup AND :dropoff) OR (:pickup BETWEEN pickupDateTime AND dropoffDateTime) OR (:dropoff BETWEEN pickupDateTime AND dropoffDateTime))',
-        ExpressionAttributeValues: {
-          ':carId': carId,
-          ':pickup': pickupDateTime,
-          ':dropoff': dropoffDateTime
-        }
-      };
-      const overlapData = await dynamoDb.scan(checkOverlapParams).promise();
-
-      if (overlapData.Items.length > 0) {
-        return res.status(400).json({ status: 'failure', message: 'Car is already booked for the selected dates' });
-      }
-
       const bookingId = uuidv4();
       const createBookingParams = {
         TableName: 'Bookings',
@@ -154,26 +139,24 @@ app.post('/verify', async (req, res) => {
         },
       };
       await dynamoDb.put(createBookingParams).promise();
-
       const updateCarParams = {
         TableName: 'G7Cars',
         Key: {
           G7cars123: carId,
         },
-        UpdateExpression: 'SET #availability = :availability, #bookedDates = list_append(if_not_exists(#bookedDates, :emptyList), :newDates)',
+        UpdateExpression: 'set #availability = :availability',
         ExpressionAttributeNames: {
-          '#availability': 'Availability',
-          '#bookedDates': 'BookedDates'
+          '#availability': 'Availability'
         },
         ExpressionAttributeValues: {
-          ':availability': 'Booked',
-          ':emptyList': [],
-          ':newDates': [ { pickupDateTime, dropoffDateTime } ]
+          ':availability': 'Booked'
         },
         ReturnValues: 'ALL_NEW'
       };
       await dynamoDb.update(updateCarParams).promise();
       const messageBody = `Booking confirmed! \nBooking ID: ${bookingId}\nCar ID: ${carId}\nPickup DateTime: ${pickupDateTime}\nDropoff DateTime: ${dropoffDateTime}`;
+
+
       await sendWhatsAppMessage('+919640019664', messageBody);
       await sendWhatsAppMessage('+917993291554', messageBody);
 
@@ -190,16 +173,36 @@ app.post('/verify', async (req, res) => {
 
 app.get('/cars', async (req, res) => {
   try {
-    const params = {
-      TableName: tableName,
+    const pickupDateTime = new Date(req.query.pickupDateTime);
+    const dropoffDateTime = new Date(req.query.dropoffDateTime);
+
+    const bookingParams = {
+      TableName: 'Bookings',
+      FilterExpression: '(pickupDateTime < :dropoffDateTime AND dropoffDateTime > :pickupDateTime) OR (pickupDateTime >= :pickupDateTime AND dropoffDateTime <= :dropoffDateTime) OR (pickupDateTime <= :pickupDateTime AND dropoffDateTime >= :dropoffDateTime)',
+      ExpressionAttributeValues: {
+        ':pickupDateTime': pickupDateTime.toISOString(),
+        ':dropoffDateTime': dropoffDateTime.toISOString()
+      }
     };
-    const data = await dynamoDb.scan(params).promise();
-    res.json(data.Items);
+    const bookingsData = await dynamoDb.scan(bookingParams).promise();
+    const carsData = await dynamoDb.scan({ TableName: tableName }).promise();
+    const cars = carsData.Items;
+    const availableCars = cars.filter(car => {
+      for (const booking of bookingsData.Items) {
+        if (car.G7cars123 === booking.carId) {
+          return false;
+        }
+      }
+      return true; 
+    });
+
+    res.json(availableCars);
   } catch (error) {
-    console.error('Error fetching data from DynamoDB:', error);
-    res.status(500).send('Unable to fetch data from DynamoDB');
+    console.error('Error fetching available cars:', error);
+    res.status(500).send('Unable to fetch available cars');
   }
 });
+
 
 app.put('/cars/:carNo', async (req, res) => {
   const carNo = req.params.carNo;
@@ -227,33 +230,6 @@ app.put('/cars/:carNo', async (req, res) => {
     res.status(500).send('Unable to update car data');
   }
 });
-
-app.post('/check-availability', async (req, res) => {
-  const { carId, pickupDateTime, dropoffDateTime } = req.body;
-
-  try {
-    const checkOverlapParams = {
-      TableName: 'Bookings',
-      FilterExpression: 'carId = :carId AND ((pickupDateTime BETWEEN :pickup AND :dropoff) OR (dropoffDateTime BETWEEN :pickup AND :dropoff) OR (:pickup BETWEEN pickupDateTime AND dropoffDateTime) OR (:dropoff BETWEEN pickupDateTime AND dropoffDateTime))',
-      ExpressionAttributeValues: {
-        ':carId': carId,
-        ':pickup': pickupDateTime,
-        ':dropoff': dropoffDateTime
-      }
-    };
-    const overlapData = await dynamoDb.scan(checkOverlapParams).promise();
-
-    if (overlapData.Items.length > 0) {
-      return res.status(400).json({ status: 'failure', message: 'Car is already booked for the selected dates' });
-    }
-
-    res.status(200).json({ status: 'success', message: 'Car is available' });
-  } catch (error) {
-    console.error('Error checking car availability:', error);
-    res.status(500).json({ status: 'failure', message: 'Unable to check car availability' });
-  }
-});
-
 
 app.delete('/cars/:carNo', async (req, res) => {
   const carNo = req.params.carNo;
