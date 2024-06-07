@@ -329,7 +329,7 @@ async function updateCarAvailability() {
           '#availability': 'Availability'
         },
         ExpressionAttributeValues: {
-          ':availability': isCarAvailable ? 'Available' : 'Not Available'
+          ':availability': isCarAvailable ? 'Available' : 'Booked'
         },
         ReturnValues: 'ALL_NEW'
       };
