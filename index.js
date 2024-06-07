@@ -197,23 +197,32 @@ async function updateCarAvailability() {
 
 app.get('/cars', async (req, res) => {
   try {
+    // Parse query parameters into Date objects
     const pickupDateTime = new Date(req.query.pickupDateTime);
     const dropoffDateTime = new Date(req.query.dropoffDateTime);
 
-    console.log(pickupDateTime)
-    console.log(dropoffDateTime)
+    console.log(pickupDateTime);
+    console.log(dropoffDateTime);
 
+    // Convert dates to ISO strings for comparison
+    const pickupISOString = pickupDateTime.toISOString();
+    const dropoffISOString = dropoffDateTime.toISOString();
+
+    // Update FilterExpression to compare ISO strings
     const bookingParams = {
       TableName: 'Bookings',
       FilterExpression: '(pickupDateTime < :dropoffDateTime AND dropoffDateTime > :pickupDateTime) OR (pickupDateTime >= :pickupDateTime AND dropoffDateTime <= :dropoffDateTime) OR (pickupDateTime <= :pickupDateTime AND dropoffDateTime >= :dropoffDateTime)',
       ExpressionAttributeValues: {
-        ':pickupDateTime': pickupDateTime.toISOString(),
-        ':dropoffDateTime': dropoffDateTime.toISOString()
+        ':pickupDateTime': pickupISOString,
+        ':dropoffDateTime': dropoffISOString
       }
     };
+
     const bookingsData = await dynamoDb.scan(bookingParams).promise();
     const carsData = await dynamoDb.scan({ TableName: tableName }).promise();
     const cars = carsData.Items;
+    
+    // Filter out cars that are not available
     const availableCars = cars.filter(car => {
       for (const booking of bookingsData.Items) {
         if (car.G7cars123 === booking.carId) {
