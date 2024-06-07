@@ -9,15 +9,17 @@ const crypto = require('crypto');
 const Razorpay = require('razorpay');
 const cron = require('node-cron');
 const twilio = require('twilio');
-require('dotenv').config()
+require('dotenv').config();
 
 const upload = multer({
   storage: multer.memoryStorage()
 });
+
 AWS.config.update({ region: 'us-east-1' });
 const dynamoDb = new AWS.DynamoDB.DocumentClient();
 const tableName = 'G7Cars';
 const s3 = new AWS.S3();
+
 app.use(cors());
 app.use(express.json());
 
@@ -84,10 +86,12 @@ app.post('/cars', upload.fields([
     res.status(500).send('Unable to post details to DynamoDB');
   }
 });
+
 const rzp = new Razorpay({
   key_id: process.env.RAZORPAY_API_KEY,
   key_secret: 'EaXIwNI6oDhQX6ul7UjWrv25',
 });
+
 app.post('/order', (req, res) => {
   const options = {
     amount: req.body.amount * 100,
@@ -115,6 +119,7 @@ const generateSignature = (paymentId, orderId, secret) => {
   const signature = hmac.digest('hex');
   return signature;
 };
+
 app.post('/verify', async (req, res) => {
   const { paymentId, orderId, signature: razorpay_signature, carId, pickupDateTime, dropoffDateTime } = req.body;
 
@@ -166,55 +171,18 @@ app.post('/verify', async (req, res) => {
   }
 });
 
-
 app.get('/cars', async (req, res) => {
   try {
-    // Parse pickup and drop date parameters from the URL query
     const { pickupDateTime, dropoffDateTime } = req.query;
-
-    // Query cars from the database
     const carsData = await dynamoDb.scan({ TableName: tableName }).promise();
     const cars = carsData.Items;
-
-    // Filter out cars that are not available for the specified pickup and dropoff date and time
-    const availableCars = cars.filter(car => {
-      // Check if the car is available for the specified date and time range
-      const isAvailable = isCarAvailable(car, pickupDateTime, dropoffDateTime);
-      return isAvailable;
-    });
-
+    const availableCars = cars.filter(car => isCarAvailable(car, pickupDateTime, dropoffDateTime));
     res.json(availableCars);
   } catch (error) {
     console.error('Error fetching available cars:', error);
     res.status(500).send('Unable to fetch available cars');
   }
 });
-
-function isCarAvailable(car, pickupDateTime, dropoffDateTime) {
-  // Check if the car is booked for the specified date and time range
-  const bookings = car.Bookings || []; // Assuming booking information is stored in a property named 'Bookings'
-  for (const booking of bookings) {
-    const bookingPickupDateTime = new Date(booking.pickupDateTime);
-    const bookingDropoffDateTime = new Date(booking.dropoffDateTime);
-    if (
-      (pickupDateTime >= bookingPickupDateTime && pickupDateTime < bookingDropoffDateTime) ||
-      (dropoffDateTime > bookingPickupDateTime && dropoffDateTime <= bookingDropoffDateTime) ||
-      (pickupDateTime <= bookingPickupDateTime && dropoffDateTime >= bookingDropoffDateTime)
-    ) {
-      return false; // Car is not available for the specified date and time range
-    }
-  }
-  
-  // Check if the current time is after the dropoffDateTime of the last booking
-  const lastBooking = bookings[bookings.length - 1];
-  if (lastBooking && new Date() >= new Date(lastBooking.dropoffDateTime)) {
-    return false; // Car is not available as it has passed the last booking's dropoffDateTime
-  }
-
-  return true; // Car is available for the specified date and time range
-}
-
-
 
 app.put('/cars/:carNo', async (req, res) => {
   const carNo = req.params.carNo;
@@ -293,21 +261,14 @@ function getImageKeyFromUrl(imageUrl) {
   return parts[parts.length - 1];
 }
 
-
 async function updateCarAvailability() {
   try {
     const now = new Date().toISOString();
-
-    // Query all cars from the G7Cars table
     const carsData = await dynamoDb.scan({ TableName: tableName }).promise();
     const cars = carsData.Items;
-
-    // Iterate over each car
     for (const car of cars) {
       const carId = car.G7cars123;
       const isAvailable = isCarAvailable(car, now);
-
-      // Update the car's availability status in the table
       const updateCarParams = {
         TableName: tableName,
         Key: { G7cars123: carId },
@@ -331,18 +292,14 @@ async function updateCarAvailability() {
 }
 
 function isCarAvailable(car, pickupDateTime, dropoffDateTime) {
-  const bookings = car.bookings || []; // Assuming booking information is stored in a property named 'bookings'
-
-  // Convert pickupDateTime and dropoffDateTime to Date objects
+  const bookings = car.bookings || [];
   const pickupTime = new Date(pickupDateTime);
   const dropoffTime = new Date(dropoffDateTime);
 
-  // Check if there is any overlap with existing bookings
   for (const booking of bookings) {
     const bookingPickupTime = new Date(booking.pickupDateTime);
     const bookingDropoffTime = new Date(booking.dropoffDateTime);
 
-    // If there's any overlap in time, the car is not available
     if (
       (pickupTime >= bookingPickupTime && pickupTime < bookingDropoffTime) ||
       (dropoffTime > bookingPickupTime && dropoffTime <= bookingDropoffTime) ||
@@ -352,7 +309,6 @@ function isCarAvailable(car, pickupDateTime, dropoffDateTime) {
     }
   }
 
-  // If no overlap, check if the current time is after the dropoffDateTime of the last booking
   if (bookings.length > 0) {
     const lastBooking = bookings[bookings.length - 1];
     if (new Date() >= new Date(lastBooking.dropoffDateTime)) {
@@ -360,10 +316,8 @@ function isCarAvailable(car, pickupDateTime, dropoffDateTime) {
     }
   }
 
-  // If there are no bookings or the current time is after the last booking's dropoffDateTime, the car is available
   return true;
 }
-
 
 cron.schedule('0 * * * *', () => {
   console.log('Running scheduled task to update car availability');
