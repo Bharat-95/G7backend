@@ -27,21 +27,23 @@ const accountSid = 'AC1f39abf23cbe3d99676f15fadc70c59f';
 const authToken = '6e2377cc97d6b3236a46f68c124fbf11';
 const client = require('twilio')(accountSid, authToken);
 
-async function sendWhatsAppMessage(to, body) {
-  try {
-    client.messages
+app.post('/api/send-message', (req, res) => {
+  const { to, body } = req.body;
+
+  client.messages
     .create({
-        body: 'Your appointment is coming up on July 21 at 3PM',
-        from: 'whatsapp:+14155238886',
-        to: 'whatsapp:+917993291554'
+      body,
+      from: 'whatsapp:+14155238886',
+      to: `whatsapp:${to}`,
     })
-    .then(message => console.log(message.sid))
-    .done();
-    console.log('WhatsApp message sent successfully');
-  } catch (error) {
-    console.error('Error sending WhatsApp message:', error);
-  }
-}
+    .then((message) => {
+      res.status(200).json({ success: true, sid: message.sid });
+    })
+    .catch((error) => {
+      console.error('Error sending message:', error);
+      res.status(500).json({ success: false, error: error.message });
+    });
+});
 
 app.post('/cars', upload.fields([
   { name: 'Coverimage', maxCount: 1 },
@@ -161,22 +163,6 @@ app.post('/verify', async (req, res) => {
 
       await dynamoDb.update(updateParams).promise();
 
-      const userMessage = `
-      Booking Confirmed!
-      Order ID: ${orderId}
-      Pickup: ${pickupDateTime.toLocaleString()}
-      Dropoff: ${dropoffDateTime.toLocaleString()}
-    `;
-
-    const ownerMessage = `
-      New Booking!
-      Order ID: ${orderId}
-      Pickup: ${pickupDateTime.toLocaleString()}
-      Dropoff: ${dropoffDateTime.toLocaleString()}
-    `;
-
-      await sendWhatsAppMessage('+919640019664', ownerMessage);
-      await sendWhatsAppMessage('+917993291554', userMessage);
 
       res.status(200).json({ status: 'success' });
     } catch (error) {
@@ -193,8 +179,6 @@ app.get('/cars', async (req, res) => {
   try {
     const { pickupDateTime, dropoffDateTime } = req.query;
 
-    console.log('pickupDateTime:', pickupDateTime);
-    console.log('dropoffDateTime:', dropoffDateTime);
 
     const carsData = await dynamoDb.scan({ TableName: tableName }).promise();
     const cars = carsData.Items;
