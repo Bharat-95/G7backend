@@ -331,30 +331,39 @@ async function updateCarAvailability() {
 }
 
 function isCarAvailable(car, pickupDateTime, dropoffDateTime) {
-  // Check if the car is booked for the specified date and time range
   const bookings = car.bookings || []; // Assuming booking information is stored in a property named 'bookings'
+
+  // Convert pickupDateTime and dropoffDateTime to Date objects
+  const pickupTime = new Date(pickupDateTime);
+  const dropoffTime = new Date(dropoffDateTime);
+
+  // Check if there is any overlap with existing bookings
   for (const booking of bookings) {
-    const bookingPickupDateTime = new Date(booking.pickupDateTime);
-    const bookingDropoffDateTime = new Date(booking.dropoffDateTime);
-    
-    // Check if there is an overlap with existing bookings
+    const bookingPickupTime = new Date(booking.pickupDateTime);
+    const bookingDropoffTime = new Date(booking.dropoffDateTime);
+
+    // If there's any overlap in time, the car is not available
     if (
-      (pickupDateTime >= bookingPickupDateTime && pickupDateTime < bookingDropoffDateTime) ||
-      (dropoffDateTime > bookingPickupDateTime && dropoffDateTime <= bookingDropoffDateTime) ||
-      (pickupDateTime <= bookingPickupDateTime && dropoffDateTime >= bookingDropoffDateTime)
+      (pickupTime >= bookingPickupTime && pickupTime < bookingDropoffTime) ||
+      (dropoffTime > bookingPickupTime && dropoffTime <= bookingDropoffTime) ||
+      (pickupTime <= bookingPickupTime && dropoffTime >= bookingDropoffTime)
     ) {
-      return false; // Car is not available for the specified date and time range
+      return false;
     }
   }
-  
-  // Check if the current time is after the dropoffDateTime of the last booking
-  const lastBooking = bookings[bookings.length - 1];
-  if (lastBooking && new Date() >= new Date(lastBooking.dropoffDateTime)) {
-    return false; // Car is not available as it has passed the last booking's dropoffDateTime
+
+  // If no overlap, check if the current time is after the dropoffDateTime of the last booking
+  if (bookings.length > 0) {
+    const lastBooking = bookings[bookings.length - 1];
+    if (new Date() >= new Date(lastBooking.dropoffDateTime)) {
+      return true;
+    }
   }
 
-  return true; // Car is available for the specified date and time range
+  // If there are no bookings or the current time is after the last booking's dropoffDateTime, the car is available
+  return true;
 }
+
 
 cron.schedule('0 * * * *', () => {
   console.log('Running scheduled task to update car availability');
