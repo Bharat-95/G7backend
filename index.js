@@ -128,18 +128,7 @@ const generateSignature = (paymentId, orderId, secret) => {
 };
 
 app.post('/verify', async (req, res) => {
-  const { 
-    paymentId, 
-    orderId, 
-    signature: razorpay_signature, 
-    carId, 
-    pickupDateTime, 
-    dropoffDateTime, 
-    phoneNumber, 
-    ownerNumber 
-  } = req.body;
-
-  console.log(req.body)
+  const { paymentId, orderId, signature: razorpay_signature, carId, pickupDateTime, dropoffDateTime, phoneNumber, ownerNumber } = req.body;
 
   const userPhoneNumber = phoneNumber[0].phoneNumber;
 
@@ -177,7 +166,7 @@ app.post('/verify', async (req, res) => {
       await dynamoDb.update(updateParams).promise();
 
       const options = {
-        timeZone: 'Asia/Kolkata',
+        timeZone: 'Asia/Kolkata', // Set the time zone to IST
         year: 'numeric',
         month: 'long',
         day: 'numeric',
@@ -191,13 +180,21 @@ app.post('/verify', async (req, res) => {
       
       const messageBody = `Your booking has been confirmed! Here are the details:\n\nBooking ID: ${bookingId}\nPayment ID: ${paymentId}\nPickup Date: ${pickupDateTimeIST}\nDrop-off Date: ${dropoffDateTimeIST}\n\nThank you for choosing us!`;
 
+      console.log(`Sending message to owner number: ${ownerNumber}`);
+      
       await client.messages.create({
         body: messageBody,
         from: 'whatsapp:+14155238886',
         to: `whatsapp:${ownerNumber}`,
-      });
+      }).then(message => console.log(`Message sent to owner, SID: ${message.sid}`))
+        .catch(error => console.error(`Failed to send message to owner: ${error.message}`));
       
-     
+      await client.messages.create({
+        body: messageBody,
+        from: 'whatsapp:+14155238886',
+        to: `whatsapp:${userPhoneNumber}`,
+      }).then(message => console.log(`Message sent to user, SID: ${message.sid}`))
+        .catch(error => console.error(`Failed to send message to user: ${error.message}`));
 
       res.status(200).json({ status: 'success' });
     } catch (error) {
@@ -210,26 +207,6 @@ app.post('/verify', async (req, res) => {
   }
 });
 
-app.get('/cars', async (req, res) => {
-  try {
-    const { pickupDateTime, dropoffDateTime } = req.query;
-
-
-    const carsData = await dynamoDb.scan({ TableName: tableName }).promise();
-    const cars = carsData.Items;
-
-    for (const car of cars) {
-      if (!isCarAvailable(car, pickupDateTime, dropoffDateTime)) {
-        car.Availability = 'Booked';
-      }
-    }
-
-    res.json(cars);
-  } catch (error) {
-    console.error('Error fetching available cars:', error);
-    res.status(500).send('Unable to fetch available cars');
-  }
-});
 
 app.put('/cars/:carNo', async (req, res) => {
   const carNo = req.params.carNo;
