@@ -11,26 +11,28 @@ const cron = require('node-cron');
 const twilio = require('twilio');
 require('dotenv').config();
 
+// Configure AWS
 AWS.config.update({ region: 'us-east-1' });
 const dynamoDb = new AWS.DynamoDB.DocumentClient();
 const s3 = new AWS.S3();
 
+// Configure Twilio
+const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
-const twilioClient = twilio('AC1f39abf23cbe3d99676f15fadc70c59f', '6e2377cc97d6b3236a46f68c124fbf11');
-
+// Multer configuration for file uploads
 const upload = multer({
   storage: multer.memoryStorage()
 });
 
-
+// Middleware
 app.use(cors());
 app.use(express.json());
 
-
+// Function to send WhatsApp message using Twilio
 async function sendWhatsAppMessage(to, body) {
   try {
     await twilioClient.messages.create({
-      from: `whatsapp:${'+14155238886'}`,
+      from: `whatsapp:${process.env.TWILIO_PHONE_NUMBER}`,
       to: `whatsapp:${to}`,
       body: body
     });
@@ -40,7 +42,7 @@ async function sendWhatsAppMessage(to, body) {
   }
 }
 
-
+// Endpoint to upload car details and images
 app.post('/cars', upload.fields([
   { name: 'Coverimage', maxCount: 1 },
   { name: 'RcFront', maxCount: 1 },
@@ -53,17 +55,17 @@ app.post('/cars', upload.fields([
   { name: 'AgreementDoc', maxCount: 1 }
 ]), async (req, res) => {
   try {
-    
+    // Generate unique ID for the car
     const carId = uuidv4();
 
-   
+    // Prepare car item with initial status 'Available'
     const carItem = {
       G7cars123: carId,
       ...req.body,
       status: 'Available'
     };
 
-
+    // Upload images to S3 and store URLs in car item
     const imageFields = ['Coverimage', 'RcFront', 'RcBack', 'AdhaarFront', 'AdhaarBack', 'Insurance', 'Pollution', 'AgreementDoc'];
     for (const field of imageFields) {
       if (req.files[field] && req.files[field].length > 0) {
@@ -82,7 +84,7 @@ app.post('/cars', upload.fields([
       }
     }
 
-
+    // Save car details to DynamoDB
     const params = {
       TableName: 'G7Cars',
       Item: carItem,
@@ -96,13 +98,13 @@ app.post('/cars', upload.fields([
   }
 });
 
-
+// Configure Razorpay
 const rzp = new Razorpay({
   key_id: process.env.RAZORPAY_API_KEY,
-  key_secret: 'EaXIwNI6oDhQX6ul7UjWrv25',
+  key_secret: process.env.RAZORPAY_API_SECRET,
 });
 
-
+// Endpoint to create order
 app.post('/order', (req, res) => {
   const options = {
     amount: req.body.amount * 100,
@@ -123,7 +125,7 @@ app.post('/order', (req, res) => {
   });
 });
 
-
+// Function to generate signature for payment verification
 const generateSignature = (paymentId, orderId, secret) => {
   const data = `${orderId}|${paymentId}`;
   const hmac = crypto.createHmac('sha256', secret);
@@ -132,11 +134,11 @@ const generateSignature = (paymentId, orderId, secret) => {
   return signature;
 };
 
-
+// Endpoint to verify payment
 app.post('/verify', async (req, res) => {
   const { paymentId, orderId, signature: razorpay_signature, carId, pickupDateTime, dropoffDateTime } = req.body;
 
-  const secret = 'EaXIwNI6oDhQX6ul7UjWrv25';
+  const secret = process.env.RAZORPAY_API_SECRET;
   const generated_signature = generateSignature(paymentId, orderId, secret);
   const verificationSucceeded = (generated_signature === razorpay_signature);
 
@@ -154,9 +156,8 @@ app.post('/verify', async (req, res) => {
         paymentId: paymentId
       };
 
- 
       const updateParams = {
-        TableName: 'G7Cars',
+        TableName: tableName,
         Key: { G7cars123: carId },
         UpdateExpression: 'SET #bookings = list_append(if_not_exists(#bookings, :empty_list), :booking)',
         ExpressionAttributeNames: {
@@ -168,11 +169,12 @@ app.post('/verify', async (req, res) => {
         },
         ReturnValues: 'ALL_NEW'
       };
+
       await dynamoDb.update(updateParams).promise();
 
       const messageBody = `Booking confirmed! \nBooking ID: ${bookingId}\nCar ID: ${carId}\nPickup DateTime: ${pickupDateTime}\nDropoff DateTime: ${dropoffDateTime}`;
-      await sendWhatsAppMessage(process.env.WHATSAPP_NUMBER_1, messageBody);
-      await sendWhatsAppMessage(process.env.WHATSAPP_NUMBER_2, messageBody);
+      await sendWhatsAppMessage('+919640019664', messageBody);
+      await sendWhatsAppMessage('+917993291554', messageBody);
 
       res.status(200).json({ status: 'success' });
     } catch (error) {
@@ -188,7 +190,11 @@ app.post('/verify', async (req, res) => {
 app.get('/cars', async (req, res) => {
   try {
     const { pickupDateTime, dropoffDateTime } = req.query;
-    const carsData = await dynamoDb.scan({ TableName: 'G7Cars' }).promise();
+
+    console.log('pickupDateTime:', pickupDateTime);
+    console.log('dropoffDateTime:', dropoffDateTime);
+
+    const carsData = await dynamoDb.scan({ TableName: tableName }).promise();
     const cars = carsData.Items;
 
     const availableCars = cars.map(car => {
@@ -206,7 +212,6 @@ app.get('/cars', async (req, res) => {
   }
 });
 
-
 function isCarAvailableForTimeSlot(car, pickupDateTime, dropoffDateTime) {
   const bookings = car.bookings || [];
   const pickupTime = new Date(pickupDateTime);
@@ -221,12 +226,160 @@ function isCarAvailableForTimeSlot(car, pickupDateTime, dropoffDateTime) {
       (dropoffTime > bookingPickupTime && dropoffTime <= bookingDropoffTime) ||
       (pickupTime <= bookingPickupTime && dropoffTime >= bookingDropoffTime)
     ) {
-      return false; 
+      return false;
     }
   }
 
-  return true; 
+  return true;
 }
+
+
+app.put('/cars/:carNo', async (req, res) => {
+  const carNo = req.params.carNo;
+
+  try {
+    const params = {
+      TableName: tableName,
+      Key: {
+        carNo: carNo
+      },
+      UpdateExpression: 'set #attr1 = :val1',
+      ExpressionAttributeNames: {
+        '#attr1': 'exampleAttribute'
+      },
+      ExpressionAttributeValues: {
+        ':val1': req.body.exampleAttribute
+      },
+      ReturnValues: 'ALL_NEW'
+    };
+
+    const data = await dynamoDb.update(params).promise();
+    res.status(200).json(data.Attributes);
+  } catch (error) {
+    console.error('Error updating car data:', error);
+    res.status(500).send('Unable to update car data');
+  }
+});
+
+app.delete('/cars/:carNo', async (req, res) => {
+  const carNo = req.params.carNo;
+
+  const params = {
+    TableName: tableName,
+    Key: {
+      G7cars123: carNo
+    },
+    ConditionExpression: 'attribute_exists(G7cars123)'
+  };
+
+  try {
+    const carDetails = await dynamoDb.get(params).promise();
+    const carData = carDetails.Item;
+
+    const imageUrls = [];
+    for (const key in carData) {
+      if (key.endsWith('Back') || key.endsWith('Front') || key === 'Coverimage' || key === 'Insurance' || key === 'AdhaarBack' || key === 'AdhaarFront' || key === 'RcBack' || key === 'RcFront') {
+        const imageAttribute = carData[key];
+        if (imageAttribute && imageAttribute.L && imageAttribute.L.length > 0) {
+          imageAttribute.L.forEach(image => {
+            imageUrls.push(image.S);
+          });
+        }
+      }
+    }
+
+    await dynamoDb.delete(params).promise();
+
+    await Promise.all(imageUrls.map(async (imageUrl) => {
+      const imageKey = getImageKeyFromUrl(imageUrl);
+      await s3.deleteObject({ Bucket: 'g7cars', Key: imageKey }).promise();
+    }));
+
+    res.status(200).send('Car deleted successfully');
+  } catch (error) {
+    console.error('Error deleting car data:', error.message, 'Details:', error);
+    if (error.code === 'ConditionalCheckFailedException') {
+      res.status(404).send('Car not found');
+    } else {
+      res.status(500).send('Unable to delete car data');
+    }
+  }
+});
+
+function getImageKeyFromUrl(imageUrl) {
+  const parts = imageUrl.split('/');
+  return parts[parts.length - 1];
+}
+
+async function updateCarAvailability() {
+  try {
+    const carsData = await dynamoDb.scan({ TableName: 'G7Cars' }).promise();
+    const cars = carsData.Items;
+
+    for (const car of cars) {
+      const isAvailable = isCarAvailableForTimeSlot(car, new Date(), new Date());
+      const availability = isAvailable ? 'Available' : 'Not available';
+
+      const updateParams = {
+        TableName: 'G7Cars',
+        Key: { G7cars123: car.G7cars123 },
+        UpdateExpression: 'SET #availability = :availability',
+        ExpressionAttributeNames: {
+          '#availability': 'Availability'
+        },
+        ExpressionAttributeValues: {
+          ':availability': availability
+        },
+        ReturnValues: 'ALL_NEW'
+      };
+
+      await dynamoDb.update(updateParams).promise();
+    }
+
+    console.log('Car availability updated successfully');
+  } catch (error) {
+    console.error('Error updating car availability:', error);
+  }
+}
+
+function isCarAvailable(car, pickupDateTime, dropoffDateTime) {
+  const bookings = car.bookings || [];
+  const pickupTime = new Date(pickupDateTime);
+  const dropoffTime = new Date(dropoffDateTime);
+
+  console.log('pickup',pickupTime)
+  console.log('drop',dropoffTime)
+
+  for (const booking of bookings) {
+    const bookingPickupTime = new Date(booking.pickupDateTime);
+    const bookingDropoffTime = new Date(booking.dropoffDateTime);
+
+    console.log(bookingPickupTime)
+    console.log(bookingDropoffTime)
+
+    if (
+      (pickupTime >= bookingPickupTime && pickupTime < bookingDropoffTime) ||
+      (dropoffTime > bookingPickupTime && dropoffTime <= bookingDropoffTime) ||
+      (pickupTime <= bookingPickupTime && dropoffTime >= bookingDropoffTime)
+    ) {
+      return false;
+    }
+  }
+
+  if (bookings.length > 0) {
+    const lastBooking = bookings[bookings.length - 1];
+    if (new Date() >= new Date(lastBooking.dropoffDateTime)) {
+      return true;
+    }
+  }
+
+  return true;
+}
+
+cron.schedule('0 * * * *', () => {
+  console.log('Running scheduled task to update car availability');
+  updateCarAvailability();
+});
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
