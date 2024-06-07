@@ -125,28 +125,40 @@ app.post('/verify', async (req, res) => {
   if (verificationSucceeded) {
     try {
       const bookingId = uuidv4();
-      const createBookingParams = {
-        TableName: 'Bookings',
-        Item: {
-          G7cars123: orderId,
-          carId,
-          bookingId,
-          pickupDateTime,
-          dropoffDateTime,
-          createdAt: new Date().toISOString(),
-          status: 'confirmed',
-          paymentId: paymentId
-        },
+      const booking = {
+        bookingId,
+        carId,
+        pickupDateTime,
+        dropoffDateTime,
+        createdAt: new Date().toISOString(),
+        status: 'confirmed',
+        paymentId: paymentId
       };
-      await dynamoDb.put(createBookingParams).promise();
+
+      const updateParams = {
+        TableName: tableName,
+        Key: { G7cars123: carId },
+        UpdateExpression: 'SET #bookings = list_append(if_not_exists(#bookings, :empty_list), :booking)',
+        ExpressionAttributeNames: {
+          '#bookings': 'bookings'
+        },
+        ExpressionAttributeValues: {
+          ':booking': [booking],
+          ':empty_list': []
+        },
+        ReturnValues: 'ALL_NEW'
+      };
+
+      await dynamoDb.update(updateParams).promise();
+
       const messageBody = `Booking confirmed! \nBooking ID: ${bookingId}\nCar ID: ${carId}\nPickup DateTime: ${pickupDateTime}\nDropoff DateTime: ${dropoffDateTime}`;
       await sendWhatsAppMessage('+919640019664', messageBody);
       await sendWhatsAppMessage('+917993291554', messageBody);
 
       res.status(200).json({ status: 'success' });
     } catch (error) {
-      console.error('Error confirming payment and creating booking:', error);
-      res.status(500).json({ status: 'failure', message: 'Failed to create booking' });
+      console.error('Error confirming payment and updating status:', error);
+      res.status(500).json({ status: 'failure', message: 'Failed to update booking and car status' });
     }
   } else {
     console.log('Payment verification failed');
@@ -154,89 +166,22 @@ app.post('/verify', async (req, res) => {
   }
 });
 
-async function updateCarAvailability() {
-  try {
-    const now = new Date().toISOString();
-
-    const bookingParams = {
-      TableName: 'Bookings',
-      FilterExpression: 'pickupDateTime <= :now AND dropoffDateTime > :now AND #status = :status',
-      ExpressionAttributeValues: {
-        ':now': now,
-        ':status': 'confirmed'
-      },
-      ExpressionAttributeNames: {
-        '#status': 'status'
-      }
-    };
-    const bookingsData = await dynamoDb.scan(bookingParams).promise();
-
-    for (const booking of bookingsData.Items) {
-      const updateCarParams = {
-        TableName: 'G7Cars',
-        Key: {
-          G7cars123: booking.carId,
-        },
-        UpdateExpression: 'set #availability = :availability',
-        ExpressionAttributeNames: {
-          '#availability': 'Availability'
-        },
-        ExpressionAttributeValues: {
-          ':availability': 'Booked'
-        },
-        ReturnValues: 'ALL_NEW'
-      };
-      await dynamoDb.update(updateCarParams).promise();
-    }
-
-    console.log('Car availability updated successfully');
-  } catch (error) {
-    console.error('Error updating car availability:', error);
-  }
-}
 
 app.get('/cars', async (req, res) => {
   try {
-    const pickupDateTimeString = req.query.pickupDateTime;
-    const dropoffDateTimeString = req.query.dropoffDateTime;
-
-    console.log('pickupDateTimeString:', pickupDateTimeString);
-    console.log('dropoffDateTimeString:', dropoffDateTimeString);
-
-    
-    const pickupDateTime = new Date(pickupDateTimeString);
-    const dropoffDateTime = new Date(dropoffDateTimeString);
-
-    console.log('pickupDateTime:', pickupDateTime);
-    console.log('dropoffDateTime:', dropoffDateTime);
-
- 
-    if (isNaN(pickupDateTime.getTime()) || isNaN(dropoffDateTime.getTime())) {
-      throw new Error('Invalid date values');
-    }
-
-   
-    const pickupISOString = pickupDateTime.toISOString();
-    const dropoffISOString = dropoffDateTime.toISOString();
-
-    console.log('pickupISOString:', pickupISOString);
-    console.log('dropoffISOString:', dropoffISOString);
-
-  
+    const { pickupDateTime, dropoffDateTime } = req.query;
     const bookingParams = {
-      TableName: 'Bookings',
-      FilterExpression: '(pickupDateTime < :dropoffDateTime AND dropoffDateTime > :pickupDateTime) OR (pickupDateTime >= :pickupDateTime AND dropoffDateTime <= :dropoffDateTime) OR (pickupDateTime <= :pickupDateTime AND dropoffDateTime >= :dropoffDateTime)',
+      TableName: 'G7Cars',
+      FilterExpression: '(pickupDateTime < :dropoffDateTime AND dropoffDateTime > :pickupDateTime)',
       ExpressionAttributeValues: {
-        ':pickupDateTime': pickupISOString,
-        ':dropoffDateTime': dropoffISOString
+        ':pickupDateTime': pickupDateTime,
+        ':dropoffDateTime': dropoffDateTime
       }
     };
 
     const bookingsData = await dynamoDb.scan(bookingParams).promise();
     const carsData = await dynamoDb.scan({ TableName: tableName }).promise();
     const cars = carsData.Items;
-    
-
     const availableCars = cars.filter(car => {
       for (const booking of bookingsData.Items) {
         if (car.G7cars123 === booking.carId) {
@@ -252,8 +197,6 @@ app.get('/cars', async (req, res) => {
     res.status(500).send('Unable to fetch available cars');
   }
 });
-
-
 
 app.put('/cars/:carNo', async (req, res) => {
   const carNo = req.params.carNo;
