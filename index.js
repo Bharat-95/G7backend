@@ -298,35 +298,42 @@ async function updateCarAvailability() {
   try {
     const now = new Date().toISOString();
 
-    const bookingParams = {
-      TableName: 'Bookings',
-      FilterExpression: 'dropoffDateTime <= :now AND #status = :status',
-      ExpressionAttributeValues: {
-        ':now': now,
-        ':status': 'confirmed'
-      },
-      ExpressionAttributeNames: {
-        '#status': 'status'
+    // Query all cars from the G7Cars table
+    const carsData = await dynamoDb.scan({ TableName: tableName }).promise();
+    const cars = carsData.Items;
+
+    // Iterate over each car
+    for (const car of cars) {
+      const carId = car.G7cars123;
+      const bookings = car.bookings || []; // Assuming booking information is stored in a property named 'bookings'
+      let isCarAvailable = true;
+
+      // Check if there are any bookings for the current date and time
+      for (const booking of bookings) {
+        const bookingPickupDateTime = new Date(booking.pickupDateTime);
+        const bookingDropoffDateTime = new Date(booking.dropoffDateTime);
+
+        // Check if the current date and time fall within the booking range
+        if (now >= bookingPickupDateTime && now <= bookingDropoffDateTime) {
+          isCarAvailable = false;
+          break; // Exit the loop if a booking is found
+        }
       }
-    };
-    const bookingsData = await dynamoDb.scan(bookingParams).promise();
 
-
-    for (const booking of bookingsData.Items) {
+      // Update the car's availability status in the table
       const updateCarParams = {
-        TableName: 'G7Cars',
-        Key: {
-          G7cars123: booking.carId,
-        },
+        TableName: tableName,
+        Key: { G7cars123: carId },
         UpdateExpression: 'set #availability = :availability',
         ExpressionAttributeNames: {
           '#availability': 'Availability'
         },
         ExpressionAttributeValues: {
-          ':availability': 'Available'
+          ':availability': isCarAvailable ? 'Available' : 'Not Available'
         },
         ReturnValues: 'ALL_NEW'
       };
+
       await dynamoDb.update(updateCarParams).promise();
     }
 
@@ -335,6 +342,7 @@ async function updateCarAvailability() {
     console.error('Error updating car availability:', error);
   }
 }
+
 cron.schedule('0 * * * *', () => {
   console.log('Running scheduled task to update car availability');
   updateCarAvailability();
