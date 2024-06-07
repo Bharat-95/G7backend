@@ -200,15 +200,29 @@ app.get('/cars', async (req, res) => {
     const pickupDateTimeString = req.query.pickupDateTime;
     const dropoffDateTimeString = req.query.dropoffDateTime;
 
-    // Convert date strings to Date objects
+    console.log('pickupDateTimeString:', pickupDateTimeString);
+    console.log('dropoffDateTimeString:', dropoffDateTimeString);
+
+    
     const pickupDateTime = new Date(pickupDateTimeString);
     const dropoffDateTime = new Date(dropoffDateTimeString);
 
-    // Convert dates to ISO strings for comparison
+    console.log('pickupDateTime:', pickupDateTime);
+    console.log('dropoffDateTime:', dropoffDateTime);
+
+ 
+    if (isNaN(pickupDateTime.getTime()) || isNaN(dropoffDateTime.getTime())) {
+      throw new Error('Invalid date values');
+    }
+
+   
     const pickupISOString = pickupDateTime.toISOString();
     const dropoffISOString = dropoffDateTime.toISOString();
 
-    // Update FilterExpression to compare ISO strings
+    console.log('pickupISOString:', pickupISOString);
+    console.log('dropoffISOString:', dropoffISOString);
+
+  
     const bookingParams = {
       TableName: 'Bookings',
       FilterExpression: '(pickupDateTime < :dropoffDateTime AND dropoffDateTime > :pickupDateTime) OR (pickupDateTime >= :pickupDateTime AND dropoffDateTime <= :dropoffDateTime) OR (pickupDateTime <= :pickupDateTime AND dropoffDateTime >= :dropoffDateTime)',
@@ -222,7 +236,7 @@ app.get('/cars', async (req, res) => {
     const carsData = await dynamoDb.scan({ TableName: tableName }).promise();
     const cars = carsData.Items;
     
-    // Filter out cars that are not available
+
     const availableCars = cars.filter(car => {
       for (const booking of bookingsData.Items) {
         if (car.G7cars123 === booking.carId) {
@@ -238,6 +252,7 @@ app.get('/cars', async (req, res) => {
     res.status(500).send('Unable to fetch available cars');
   }
 });
+
 
 
 app.put('/cars/:carNo', async (req, res) => {
