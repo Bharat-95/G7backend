@@ -197,16 +197,15 @@ async function updateCarAvailability() {
 
 app.get('/cars', async (req, res) => {
   try {
-    // Parse query parameters into Date objects
-    const pickupDateTime = new Date(req.query.pickupDateTime);
-    const dropoffDateTime = new Date(req.query.dropoffDateTime);
+    const pickupDateTimeString = req.query.pickupDateTime;
+const dropoffDateTimeString = req.query.dropoffDateTime;
 
     console.log(pickupDateTime);
     console.log(dropoffDateTime);
 
     // Convert dates to ISO strings for comparison
-    const pickupISOString = pickupDateTime.toISOString();
-    const dropoffISOString = dropoffDateTime.toISOString();
+    const pickupDateTime = new Date(pickupDateTimeString);
+const dropoffDateTime = new Date(dropoffDateTimeString);
 
     // Update FilterExpression to compare ISO strings
     const bookingParams = {
