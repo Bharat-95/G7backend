@@ -174,8 +174,8 @@ app.get('/cars', async (req, res) => {
       TableName: 'G7Cars',
       FilterExpression: '(pickupDateTime < :dropoffDateTime AND dropoffDateTime > :pickupDateTime)',
       ExpressionAttributeValues: {
-        ':pickupDateTime': pickupDateTime,
-        ':dropoffDateTime': dropoffDateTime
+        ':pickupDateTime': { S: pickupDateTime },
+        ':dropoffDateTime': { S: dropoffDateTime }
       }
     };
 
@@ -185,7 +185,7 @@ app.get('/cars', async (req, res) => {
     const availableCars = cars.filter(car => {
       for (const booking of bookingsData.Items) {
         if (car.G7cars123 === booking.carId) {
-          return false;
+          return false; 
         }
       }
       return true; 
@@ -197,6 +197,7 @@ app.get('/cars', async (req, res) => {
     res.status(500).send('Unable to fetch available cars');
   }
 });
+
 
 app.put('/cars/:carNo', async (req, res) => {
   const carNo = req.params.carNo;
