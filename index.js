@@ -139,6 +139,8 @@ app.post('/verify', async (req, res) => {
     ownerNumber 
   } = req.body;
 
+  console.log(req.body)
+
   const userPhoneNumber = phoneNumber[0].phoneNumber;
 
   const secret = 'EaXIwNI6oDhQX6ul7UjWrv25';
