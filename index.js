@@ -166,13 +166,27 @@ app.post('/verify', async (req, res) => {
 
       await dynamoDb.update(updateParams).promise();
 
-      // Construct WhatsApp message body
-      const messageBody = `Your booking has been confirmed! Here are the details:\n\nBooking ID: ${bookingId}\nPayment ID: ${paymentId}\nPickup Date: ${pickupDateTime}\nDrop-off Date: ${dropoffDateTime}\n\nThank you for choosing us!`;
+      const options = {
+        timeZone: 'Asia/Kolkata', // Set the time zone to IST
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: 'numeric',
+        second: 'numeric',
+      };
+      
+      const pickupDateTimeIST = new Date(pickupDateTime).toLocaleString('en-IN', options);
+      const dropoffDateTimeIST = new Date(dropoffDateTime).toLocaleString('en-IN', options);
+      
+      const messageBody = `Your booking has been confirmed! Here are the details:\n\nBooking ID: ${bookingId}\nPayment ID: ${paymentId}\nPickup Date: ${pickupDateTimeIST}\nDrop-off Date: ${dropoffDateTimeIST}\n\nThank you for choosing us!`;
 
-      // Send WhatsApp message
+
+      
       await client.messages.create({
         body: messageBody,
         from: 'whatsapp:+14155238886',
+        to:'whatsapp:+919640019664',
         to: `whatsapp:${userPhoneNumber}`,
       });
 
