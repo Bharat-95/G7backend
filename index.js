@@ -128,9 +128,17 @@ const generateSignature = (paymentId, orderId, secret) => {
 };
 
 app.post('/verify', async (req, res) => {
-  const { paymentId, orderId, signature: razorpay_signature, carId, pickupDateTime, dropoffDateTime, phoneNumber } = req.body;
+  const { 
+    paymentId, 
+    orderId, 
+    signature: razorpay_signature, 
+    carId, 
+    pickupDateTime, 
+    dropoffDateTime, 
+    phoneNumber, 
+    ownerNumber 
+  } = req.body;
 
-  // Extracting phone number from the phoneNumber object
   const userPhoneNumber = phoneNumber[0].phoneNumber;
 
   const secret = 'EaXIwNI6oDhQX6ul7UjWrv25';
@@ -167,7 +175,7 @@ app.post('/verify', async (req, res) => {
       await dynamoDb.update(updateParams).promise();
 
       const options = {
-        timeZone: 'Asia/Kolkata', // Set the time zone to IST
+        timeZone: 'Asia/Kolkata',
         year: 'numeric',
         month: 'long',
         day: 'numeric',
@@ -181,12 +189,10 @@ app.post('/verify', async (req, res) => {
       
       const messageBody = `Your booking has been confirmed! Here are the details:\n\nBooking ID: ${bookingId}\nPayment ID: ${paymentId}\nPickup Date: ${pickupDateTimeIST}\nDrop-off Date: ${dropoffDateTimeIST}\n\nThank you for choosing us!`;
 
-      const ownerNumber ='+919000640052';
-
       await client.messages.create({
         body: messageBody,
         from: 'whatsapp:+14155238886',
-        to:`whatsapp:${ownerNumber}`,
+        to: `whatsapp:${ownerNumber}`,
       });
       
       await client.messages.create({
@@ -194,8 +200,6 @@ app.post('/verify', async (req, res) => {
         from: 'whatsapp:+14155238886',
         to: `whatsapp:${userPhoneNumber}`,
       });
-
-     
 
       res.status(200).json({ status: 'success' });
     } catch (error) {
