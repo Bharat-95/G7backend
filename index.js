@@ -139,10 +139,43 @@ app.post('/verify', async (req, res) => {
         },
       };
       await dynamoDb.put(createBookingParams).promise();
+      const messageBody = `Booking confirmed! \nBooking ID: ${bookingId}\nCar ID: ${carId}\nPickup DateTime: ${pickupDateTime}\nDropoff DateTime: ${dropoffDateTime}`;
+      await sendWhatsAppMessage('+919640019664', messageBody);
+      await sendWhatsAppMessage('+917993291554', messageBody);
+
+      res.status(200).json({ status: 'success' });
+    } catch (error) {
+      console.error('Error confirming payment and creating booking:', error);
+      res.status(500).json({ status: 'failure', message: 'Failed to create booking' });
+    }
+  } else {
+    console.log('Payment verification failed');
+    res.status(400).json({ status: 'failure' });
+  }
+});
+
+async function updateCarAvailability() {
+  try {
+    const now = new Date().toISOString();
+
+    const bookingParams = {
+      TableName: 'Bookings',
+      FilterExpression: 'pickupDateTime <= :now AND dropoffDateTime > :now AND #status = :status',
+      ExpressionAttributeValues: {
+        ':now': now,
+        ':status': 'confirmed'
+      },
+      ExpressionAttributeNames: {
+        '#status': 'status'
+      }
+    };
+    const bookingsData = await dynamoDb.scan(bookingParams).promise();
+
+    for (const booking of bookingsData.Items) {
       const updateCarParams = {
         TableName: 'G7Cars',
         Key: {
-          G7cars123: carId,
+          G7cars123: booking.carId,
         },
         UpdateExpression: 'set #availability = :availability',
         ExpressionAttributeNames: {
@@ -154,22 +187,13 @@ app.post('/verify', async (req, res) => {
         ReturnValues: 'ALL_NEW'
       };
       await dynamoDb.update(updateCarParams).promise();
-      const messageBody = `Booking confirmed! \nBooking ID: ${bookingId}\nCar ID: ${carId}\nPickup DateTime: ${pickupDateTime}\nDropoff DateTime: ${dropoffDateTime}`;
-
-
-      await sendWhatsAppMessage('+919640019664', messageBody);
-      await sendWhatsAppMessage('+917993291554', messageBody);
-
-      res.status(200).json({ status: 'success' });
-    } catch (error) {
-      console.error('Error confirming payment and updating status:', error);
-      res.status(500).json({ status: 'failure', message: 'Failed to update booking and car status' });
     }
-  } else {
-    console.log('Payment verification failed');
-    res.status(400).json({ status: 'failure' });
+
+    console.log('Car availability updated successfully');
+  } catch (error) {
+    console.error('Error updating car availability:', error);
   }
-});
+}
 
 app.get('/cars', async (req, res) => {
   try {
