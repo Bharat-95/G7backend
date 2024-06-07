@@ -159,7 +159,6 @@ app.post('/verify', async (req, res) => {
       const userMessage = `
       Booking Confirmed!
       Order ID: ${orderId}
-      Car: ${selectedCar.Name}
       Pickup: ${pickupDateTime.toLocaleString()}
       Dropoff: ${dropoffDateTime.toLocaleString()}
       Total Price: ₹ ${roundedPrice}
@@ -168,7 +167,6 @@ app.post('/verify', async (req, res) => {
     const ownerMessage = `
       New Booking!
       Order ID: ${orderId}
-      Car: ${selectedCar.Name}
       Pickup: ${pickupDateTime.toLocaleString()}
       Dropoff: ${dropoffDateTime.toLocaleString()}
       Total Price: ₹ ${roundedPrice}
