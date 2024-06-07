@@ -174,6 +174,9 @@ app.post('/verify', async (req, res) => {
 app.get('/cars', async (req, res) => {
   try {
     const { pickupDateTime, dropoffDateTime } = req.query;
+
+    console.log('pickupDateTime:', pickupDateTime);
+    console.log('dropoffDateTime:', dropoffDateTime);
     const carsData = await dynamoDb.scan({ TableName: tableName }).promise();
     const cars = carsData.Items;
     const availableCars = cars.filter(car => isCarAvailable(car, pickupDateTime, dropoffDateTime));
