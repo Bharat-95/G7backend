@@ -200,6 +200,9 @@ app.get('/cars', async (req, res) => {
     const pickupDateTime = new Date(req.query.pickupDateTime);
     const dropoffDateTime = new Date(req.query.dropoffDateTime);
 
+    console.log(pickupDateTime)
+    console.log(dropoffDateTime)
+
     const bookingParams = {
       TableName: 'Bookings',
       FilterExpression: '(pickupDateTime < :dropoffDateTime AND dropoffDateTime > :pickupDateTime) OR (pickupDateTime >= :pickupDateTime AND dropoffDateTime <= :dropoffDateTime) OR (pickupDateTime <= :pickupDateTime AND dropoffDateTime >= :dropoffDateTime)',
