@@ -130,7 +130,8 @@ const generateSignature = (paymentId, orderId, secret) => {
 app.post('/verify', async (req, res) => {
   const { paymentId, orderId, signature: razorpay_signature, carId, pickupDateTime, dropoffDateTime, phoneNumber } = req.body;
 
-  console.log(req.body)
+  // Extracting phone number from the phoneNumber object
+  const userPhoneNumber = phoneNumber[0].phoneNumber;
 
   const secret = 'EaXIwNI6oDhQX6ul7UjWrv25';
   const generated_signature = generateSignature(paymentId, orderId, secret);
@@ -148,7 +149,6 @@ app.post('/verify', async (req, res) => {
         status: 'confirmed',
         paymentId: paymentId
       };
-    
 
       const updateParams = {
         TableName: tableName,
@@ -173,7 +173,7 @@ app.post('/verify', async (req, res) => {
       await client.messages.create({
         body: messageBody,
         from: 'whatsapp:+14155238886',
-        to: `whatsapp:${phoneNumber}`,
+        to: `whatsapp:${userPhoneNumber}`,
       });
 
       res.status(200).json({ status: 'success' });
@@ -186,6 +186,7 @@ app.post('/verify', async (req, res) => {
     res.status(400).json({ status: 'failure' });
   }
 });
+
 app.get('/cars', async (req, res) => {
   try {
     const { pickupDateTime, dropoffDateTime } = req.query;
