@@ -297,17 +297,18 @@ function getImageKeyFromUrl(imageUrl) {
 
 async function updateCarAvailability() {
   try {
-    const carsData = await dynamoDb.scan({ TableName: 'G7Cars' }).promise();
+    const now = new Date().toISOString();
+    const carsData = await dynamoDb.scan({ TableName: tableName }).promise();
     const cars = carsData.Items;
-
     for (const car of cars) {
-      const isAvailable = isCarAvailableForTimeSlot(car, new Date(), new Date());
-      const availability = isAvailable ? 'Available' : 'Not available';
+      const carId = car.G7cars123;
+      const isAvailable = isCarAvailable(car, now);
+      const availability = isAvailable ? 'Available' : 'Booked';
 
-      const updateParams = {
-        TableName: 'G7Cars',
-        Key: { G7cars123: car.G7cars123 },
-        UpdateExpression: 'SET #availability = :availability',
+      const updateCarParams = {
+        TableName: tableName,
+        Key: { G7cars123: carId },
+        UpdateExpression: 'set #availability = :availability',
         ExpressionAttributeNames: {
           '#availability': 'Availability'
         },
@@ -317,7 +318,7 @@ async function updateCarAvailability() {
         ReturnValues: 'ALL_NEW'
       };
 
-      await dynamoDb.update(updateParams).promise();
+      await dynamoDb.update(updateCarParams).promise();
     }
 
     console.log('Car availability updated successfully');
@@ -326,14 +327,20 @@ async function updateCarAvailability() {
   }
 }
 
-function isCarAvailableForTimeSlot(car, pickupDateTime, dropoffDateTime) {
+function isCarAvailable(car, pickupDateTime, dropoffDateTime) {
   const bookings = car.bookings || [];
   const pickupTime = new Date(pickupDateTime);
   const dropoffTime = new Date(dropoffDateTime);
 
+  console.log('pickup',pickupTime)
+  console.log('drop',dropoffTime)
+
   for (const booking of bookings) {
     const bookingPickupTime = new Date(booking.pickupDateTime);
     const bookingDropoffTime = new Date(booking.dropoffDateTime);
+
+    console.log(bookingPickupTime)
+    console.log(bookingDropoffTime)
 
     if (
       (pickupTime >= bookingPickupTime && pickupTime < bookingDropoffTime) ||
@@ -341,6 +348,13 @@ function isCarAvailableForTimeSlot(car, pickupDateTime, dropoffDateTime) {
       (pickupTime <= bookingPickupTime && dropoffTime >= bookingDropoffTime)
     ) {
       return false;
+    }
+  }
+
+  if (bookings.length > 0) {
+    const lastBooking = bookings[bookings.length - 1];
+    if (new Date() >= new Date(lastBooking.dropoffDateTime)) {
+      return true;
     }
   }
 
