@@ -299,21 +299,16 @@ function isCarAvailable(car, pickupDateTime, dropoffDateTime) {
   const pickupTime = new Date(pickupDateTime);
   const dropoffTime = new Date(dropoffDateTime);
 
-  console.log('pickup',pickupTime)
-  console.log('drop',dropoffTime)
-
   for (const booking of bookings) {
     const bookingPickupTime = new Date(booking.pickupDateTime);
     const bookingDropoffTime = new Date(booking.dropoffDateTime);
-
-    console.log(bookingPickupTime)
-    console.log(bookingDropoffTime)
 
     if (
       (pickupTime >= bookingPickupTime && pickupTime < bookingDropoffTime) ||
       (dropoffTime > bookingPickupTime && dropoffTime <= bookingDropoffTime) ||
       (pickupTime <= bookingPickupTime && dropoffTime >= bookingDropoffTime)
     ) {
+
       return false;
     }
   }
