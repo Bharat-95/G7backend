@@ -29,7 +29,7 @@ async function sendWhatsAppMessage(to, body) {
   try {
     await twilioClient.messages.create({
       from: 'whatsapp:' + '+14155238886',
-      to: 'whatsapp:' + to,
+      to: `whatsapp:${to}`,
       body: body
     });
     console.log('WhatsApp message sent successfully');
@@ -156,9 +156,27 @@ app.post('/verify', async (req, res) => {
 
       await dynamoDb.update(updateParams).promise();
 
+      const userMessage = `
+      Booking Confirmed!
+      Order ID: ${orderId}
+      Car: ${selectedCar.Name}
+      Pickup: ${pickupDateTime.toLocaleString()}
+      Dropoff: ${dropoffDateTime.toLocaleString()}
+      Total Price: ₹ ${roundedPrice}
+    `;
+
+    const ownerMessage = `
+      New Booking!
+      Order ID: ${orderId}
+      Car: ${selectedCar.Name}
+      Pickup: ${pickupDateTime.toLocaleString()}
+      Dropoff: ${dropoffDateTime.toLocaleString()}
+      Total Price: ₹ ${roundedPrice}
+    `;
+
       const messageBody = `Booking confirmed! \nBooking ID: ${bookingId}\nCar ID: ${carId}\nPickup DateTime: ${pickupDateTime}\nDropoff DateTime: ${dropoffDateTime}`;
-      await sendWhatsAppMessage('+919640019664', messageBody);
-      await sendWhatsAppMessage('+917993291554', messageBody);
+      await sendWhatsAppMessage('+919640019664', ownerMessage);
+      await sendWhatsAppMessage('+917993291554', userMessage);
 
       res.status(200).json({ status: 'success' });
     } catch (error) {
@@ -183,7 +201,6 @@ app.get('/cars', async (req, res) => {
 
     for (const car of cars) {
       if (!isCarAvailable(car, pickupDateTime, dropoffDateTime)) {
-        // Update the Availability attribute of unavailable cars to "Booked"
         car.Availability = 'Booked';
       }
     }
