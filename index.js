@@ -305,20 +305,7 @@ async function updateCarAvailability() {
     // Iterate over each car
     for (const car of cars) {
       const carId = car.G7cars123;
-      const bookings = car.bookings || []; // Assuming booking information is stored in a property named 'bookings'
-      let isCarAvailable = true;
-
-      // Check if there are any bookings for the current date and time
-      for (const booking of bookings) {
-        const bookingPickupDateTime = new Date(booking.pickupDateTime);
-        const bookingDropoffDateTime = new Date(booking.dropoffDateTime);
-
-        // Check if the current date and time fall within the booking range
-        if (now >= bookingPickupDateTime && now <= bookingDropoffDateTime) {
-          isCarAvailable = false;
-          break; // Exit the loop if a booking is found
-        }
-      }
+      const isAvailable = isCarAvailable(car, now);
 
       // Update the car's availability status in the table
       const updateCarParams = {
@@ -329,7 +316,7 @@ async function updateCarAvailability() {
           '#availability': 'Availability'
         },
         ExpressionAttributeValues: {
-          ':availability': isCarAvailable ? 'Available' : 'Booked'
+          ':availability': isAvailable ? 'Available' : 'Booked'
         },
         ReturnValues: 'ALL_NEW'
       };
@@ -341,6 +328,30 @@ async function updateCarAvailability() {
   } catch (error) {
     console.error('Error updating car availability:', error);
   }
+}
+
+function isCarAvailable(car, pickupDateTime, dropoffDateTime) {
+  // Check if the car is booked for the specified date and time range
+  const bookings = car.bookings || []; // Assuming booking information is stored in a property named 'bookings'
+  for (const booking of bookings) {
+    const bookingPickupDateTime = new Date(booking.pickupDateTime);
+    const bookingDropoffDateTime = new Date(booking.dropoffDateTime);
+    if (
+      (pickupDateTime >= bookingPickupDateTime && pickupDateTime < bookingDropoffDateTime) ||
+      (dropoffDateTime > bookingPickupDateTime && dropoffDateTime <= bookingDropoffDateTime) ||
+      (pickupDateTime <= bookingPickupDateTime && dropoffDateTime >= bookingDropoffDateTime)
+    ) {
+      return false; // Car is not available for the specified date and time range
+    }
+  }
+  
+  // Check if the current time is after the dropoffDateTime of the last booking
+  const lastBooking = bookings[bookings.length - 1];
+  if (lastBooking && new Date() >= new Date(lastBooking.dropoffDateTime)) {
+    return false; // Car is not available as it has passed the last booking's dropoffDateTime
+  }
+
+  return true; // Car is available for the specified date and time range
 }
 
 cron.schedule('0 * * * *', () => {
