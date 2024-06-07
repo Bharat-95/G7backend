@@ -177,46 +177,15 @@ app.get('/cars', async (req, res) => {
 
     console.log('pickupDateTime:', pickupDateTime);
     console.log('dropoffDateTime:', dropoffDateTime);
-
     const carsData = await dynamoDb.scan({ TableName: tableName }).promise();
     const cars = carsData.Items;
-
-    const availableCars = cars.map(car => {
-      const isCarAvailable = isCarAvailableForTimeSlot(car, pickupDateTime, dropoffDateTime);
-      return {
-        ...car,
-        status: isCarAvailable ? 'Available' : 'Not available'
-      };
-    });
-
+    const availableCars = cars.filter(car => isCarAvailable(car, pickupDateTime, dropoffDateTime));
     res.json(availableCars);
   } catch (error) {
     console.error('Error fetching available cars:', error);
     res.status(500).send('Unable to fetch available cars');
   }
 });
-
-function isCarAvailableForTimeSlot(car, pickupDateTime, dropoffDateTime) {
-  const bookings = car.bookings || [];
-  const pickupTime = new Date(pickupDateTime);
-  const dropoffTime = new Date(dropoffDateTime);
-
-  for (const booking of bookings) {
-    const bookingPickupTime = new Date(booking.pickupDateTime);
-    const bookingDropoffTime = new Date(booking.dropoffDateTime);
-
-    if (
-      (pickupTime >= bookingPickupTime && pickupTime < bookingDropoffTime) ||
-      (dropoffTime > bookingPickupTime && dropoffTime <= bookingDropoffTime) ||
-      (pickupTime <= bookingPickupTime && dropoffTime >= bookingDropoffTime)
-    ) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
 
 app.put('/cars/:carNo', async (req, res) => {
   const carNo = req.params.carNo;
@@ -303,8 +272,6 @@ async function updateCarAvailability() {
     for (const car of cars) {
       const carId = car.G7cars123;
       const isAvailable = isCarAvailable(car, now);
-      const availability = isAvailable ? 'Available' : 'Booked';
-
       const updateCarParams = {
         TableName: tableName,
         Key: { G7cars123: carId },
@@ -313,7 +280,7 @@ async function updateCarAvailability() {
           '#availability': 'Availability'
         },
         ExpressionAttributeValues: {
-          ':availability': availability
+          ':availability': isAvailable ? 'Available' : 'Booked'
         },
         ReturnValues: 'ALL_NEW'
       };
