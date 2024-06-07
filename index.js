@@ -190,6 +190,12 @@ app.post('/verify', async (req, res) => {
         to: `whatsapp:${userPhoneNumber}`,
       });
 
+      await client.messages.create({
+        body: messageBody,
+        from: 'whatsapp:+14155238886',
+        to:'whatsapp:+919640019664',
+      });
+
       res.status(200).json({ status: 'success' });
     } catch (error) {
       console.error('Error confirming payment and updating status:', error);
