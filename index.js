@@ -207,6 +207,26 @@ app.post('/verify', async (req, res) => {
   }
 });
 
+app.get('/cars', async (req, res) => {
+  try {
+    const { pickupDateTime, dropoffDateTime } = req.query;
+
+
+    const carsData = await dynamoDb.scan({ TableName: tableName }).promise();
+    const cars = carsData.Items;
+
+    for (const car of cars) {
+      if (!isCarAvailable(car, pickupDateTime, dropoffDateTime)) {
+        car.Availability = 'Booked';
+      }
+    }
+
+    res.json(cars);
+  } catch (error) {
+    console.error('Error fetching available cars:', error);
+    res.status(500).send('Unable to fetch available cars');
+  }
+});
 
 app.put('/cars/:carNo', async (req, res) => {
   const carNo = req.params.carNo;
