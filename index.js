@@ -161,7 +161,6 @@ app.post('/verify', async (req, res) => {
       Order ID: ${orderId}
       Pickup: ${pickupDateTime.toLocaleString()}
       Dropoff: ${dropoffDateTime.toLocaleString()}
-      Total Price: ₹ ${roundedPrice}
     `;
 
     const ownerMessage = `
@@ -169,10 +168,8 @@ app.post('/verify', async (req, res) => {
       Order ID: ${orderId}
       Pickup: ${pickupDateTime.toLocaleString()}
       Dropoff: ${dropoffDateTime.toLocaleString()}
-      Total Price: ₹ ${roundedPrice}
     `;
 
-      const messageBody = `Booking confirmed! \nBooking ID: ${bookingId}\nCar ID: ${carId}\nPickup DateTime: ${pickupDateTime}\nDropoff DateTime: ${dropoffDateTime}`;
       await sendWhatsAppMessage('+919640019664', ownerMessage);
       await sendWhatsAppMessage('+917993291554', userMessage);
 
