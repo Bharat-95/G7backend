@@ -336,6 +336,8 @@ function isCarAvailable(car, pickupDateTime, dropoffDateTime) {
   for (const booking of bookings) {
     const bookingPickupDateTime = new Date(booking.pickupDateTime);
     const bookingDropoffDateTime = new Date(booking.dropoffDateTime);
+    
+    // Check if there is an overlap with existing bookings
     if (
       (pickupDateTime >= bookingPickupDateTime && pickupDateTime < bookingDropoffDateTime) ||
       (dropoffDateTime > bookingPickupDateTime && dropoffDateTime <= bookingDropoffDateTime) ||
