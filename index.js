@@ -197,11 +197,7 @@ app.post('/verify', async (req, res) => {
         to: `whatsapp:${ownerNumber}`,
       });
       
-      await client.messages.create({
-        body: messageBody,
-        from: 'whatsapp:+14155238886',
-        to: `whatsapp:${userPhoneNumber}`,
-      });
+     
 
       res.status(200).json({ status: 'success' });
     } catch (error) {
