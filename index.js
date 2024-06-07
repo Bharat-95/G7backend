@@ -298,6 +298,7 @@ function isCarAvailable(car, pickupDateTime, dropoffDateTime) {
   const bookings = car.bookings || [];
   const pickupTime = new Date(pickupDateTime);
   const dropoffTime = new Date(dropoffDateTime);
+  let isAvailable = true;
 
   for (const booking of bookings) {
     const bookingPickupTime = new Date(booking.pickupDateTime);
@@ -308,19 +309,21 @@ function isCarAvailable(car, pickupDateTime, dropoffDateTime) {
       (dropoffTime > bookingPickupTime && dropoffTime <= bookingDropoffTime) ||
       (pickupTime <= bookingPickupTime && dropoffTime >= bookingDropoffTime)
     ) {
-
-      return false;
+      isAvailable = false;
+      break;
     }
   }
 
-  if (bookings.length > 0) {
-    const lastBooking = bookings[bookings.length - 1];
-    if (new Date() >= new Date(lastBooking.dropoffDateTime)) {
-      return true;
+  if (isAvailable) {
+    if (bookings.length > 0) {
+      const lastBooking = bookings[bookings.length - 1];
+      if (new Date() >= new Date(lastBooking.dropoffDateTime)) {
+        return true;
+      }
     }
   }
 
-  return true;
+  return isAvailable;
 }
 
 cron.schedule('0 * * * *', () => {
