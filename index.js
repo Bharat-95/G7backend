@@ -23,8 +23,8 @@ const s3 = new AWS.S3();
 app.use(cors());
 app.use(express.json());
 
-const accountSid = '284764794731339';
-const authToken = '6e2377cc97d6b3236a46f68c124fbf11';
+const accountSid = 'AC1f39abf23cbe3d99676f15fadc70c59f';
+const authToken = '293f932500f6f69ba97e7482a7900f9b';
 const client = require('twilio')(accountSid, authToken);
 
 app.post('/api/send-message', (req, res) => {
