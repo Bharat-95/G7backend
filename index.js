@@ -33,7 +33,7 @@ app.post('/api/send-message', (req, res) => {
   client.messages
     .create({
       body,
-      from: 'whatsapp:+919133300025',
+      from: 'whatsapp:+14155238886',
       to: `whatsapp:${to}`,
     })
     .then((message) => {
