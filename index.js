@@ -31,9 +31,9 @@ app.post('/send-otp', async (req, res) => {
   const { phoneNumber } = req.body;
 
   try {
-    const verification = await client.verify.v2.services('VA1bf0a0c5c9fe1d538062069a63ccd60f')
+    const verification = await client.verify.v2.services('VA1c081e44130d9993a21bb8993d10a7ce')
       .verifications
-      .create({ to: `whatsapp:${phoneNumber}`, channel: 'whatsapp' });
+      .create({ to: `whatsapp:${phoneNumber}`, channel: 'whatsapp' }); 
 
     res.json({ status: verification.status });
   } catch (error) {
@@ -47,7 +47,7 @@ app.post('/verify-otp', async (req, res) => {
   const { phoneNumber, code } = req.body;
 
   try {
-    const verification_check = await client.verify.v2.services('VA1bf0a0c5c9fe1d538062069a63ccd60f')
+    const verification_check = await client.verify.v2.services('VA1c081e44130d9993a21bb8993d10a7ce')
       .verificationChecks
       .create({ to: `whatsapp:${phoneNumber}`, code });
 
