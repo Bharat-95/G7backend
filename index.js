@@ -24,7 +24,7 @@ app.use(cors());
 app.use(express.json());
 
 const accountSid = 'AC1f39abf23cbe3d99676f15fadc70c59f';
-const authToken = '936ad1f79a08a49eb5f13c32e59e6259';
+const authToken = '50532fcfadb6724923645fa00b42ba58';
 const client = require('twilio')(accountSid, authToken);
 
 app.post('/send-otp', async (req, res) => {
