@@ -27,6 +27,24 @@ const accountSid = 'AC1f39abf23cbe3d99676f15fadc70c59f';
 const authToken = '293f932500f6f69ba97e7482a7900f9b';
 const client = require('twilio')(accountSid, authToken);
 
+app.post('/send-otp', (req, res) => {
+  const { phoneNumber } = req.body;
+  client.verify.services(serviceId)
+    .verifications
+    .create({ to: `whatsapp:${phoneNumber}`, channel: 'whatsapp' })
+    .then(verification => res.json({ status: verification.status }))
+    .catch(err => res.status(500).json({ error: err.message }));
+});
+
+app.post('/verify-otp', (req, res) => {
+  const { phoneNumber, code } = req.body;
+  client.verify.services(serviceId)
+    .verificationChecks
+    .create({ to: `whatsapp:${phoneNumber}`, code })
+    .then(verification_check => res.json({ status: verification_check.status }))
+    .catch(err => res.status(500).json({ error: err.message }));
+});
+
 app.post('/api/send-message', (req, res) => {
   const { to, body } = req.body;
 
