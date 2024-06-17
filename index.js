@@ -24,25 +24,38 @@ app.use(cors());
 app.use(express.json());
 
 const accountSid = 'AC1f39abf23cbe3d99676f15fadc70c59f';
-const authToken = '293f932500f6f69ba97e7482a7900f9b';
+const authToken = '936ad1f79a08a49eb5f13c32e59e6259';
 const client = require('twilio')(accountSid, authToken);
 
-app.post('/send-otp', (req, res) => {
+app.post('/send-otp', async (req, res) => {
   const { phoneNumber } = req.body;
-  client.verify.services('VA1bf0a0c5c9fe1d538062069a63ccd60f')
-    .verifications
-    .create({ to: `whatsapp:${phoneNumber}`, channel: 'whatsapp' })
-    .then(verification => res.json({ status: verification.status }))
-    .catch(err => res.status(500).json({ error: err.message }));
+
+  try {
+    const verification = await client.verify.services('VA1bf0a0c5c9fe1d538062069a63ccd60f')
+      .verifications
+      .create({ to: `whatsapp:${phoneNumber}`, channel: 'whatsapp' });
+
+    res.json({ status: verification.status });
+  } catch (error) {
+    console.error('Error sending OTP:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
-app.post('/verify-otp', (req, res) => {
+
+app.post('/verify-otp', async (req, res) => {
   const { phoneNumber, code } = req.body;
-  client.verify.services('VA1bf0a0c5c9fe1d538062069a63ccd60f')
-    .verificationChecks
-    .create({ to: `whatsapp:${phoneNumber}`, code })
-    .then(verification_check => res.json({ status: verification_check.status }))
-    .catch(err => res.status(500).json({ error: err.message }));
+
+  try {
+    const verification_check = await client.verify.services('VA1bf0a0c5c9fe1d538062069a63ccd60f')
+      .verificationChecks
+      .create({ to: `whatsapp:${phoneNumber}`, code });
+
+    res.json({ status: verification_check.status });
+  } catch (error) {
+    console.error('Error verifying OTP:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 app.post('/api/send-message', (req, res) => {
