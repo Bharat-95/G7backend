@@ -29,7 +29,7 @@ const client = require('twilio')(accountSid, authToken);
 
 app.post('/send-otp', (req, res) => {
   const { phoneNumber } = req.body;
-  client.verify.services(serviceId)
+  client.verify.services('VA1bf0a0c5c9fe1d538062069a63ccd60f')
     .verifications
     .create({ to: `whatsapp:${phoneNumber}`, channel: 'whatsapp' })
     .then(verification => res.json({ status: verification.status }))
@@ -38,7 +38,7 @@ app.post('/send-otp', (req, res) => {
 
 app.post('/verify-otp', (req, res) => {
   const { phoneNumber, code } = req.body;
-  client.verify.services(serviceId)
+  client.verify.services('VA1bf0a0c5c9fe1d538062069a63ccd60f')
     .verificationChecks
     .create({ to: `whatsapp:${phoneNumber}`, code })
     .then(verification_check => res.json({ status: verification_check.status }))
