@@ -27,18 +27,19 @@ app.use(express.json());
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_ID;
 const client = require('twilio')(accountSid, authToken);
-client.verify.v2.services
+const twilioService = await client.verify.v2.services
                 .create({friendlyName: 'G7Cars',
                    "whatsapp.MsgServiceSid":'MGd688e4ca411679a70882ddad813f6c3d' })
-                   .then(service => console.log('Service activation ** ' ,  service.sid));
+                  //  .then(service => console.log('Service activation ** ' ,  service.sid));
 
 app.post('/send-otp', async (req, res) => {
   const { phoneNumber } =  '+917993291554' //req.body;
   console.log('Phone is :', phoneNumber);
   try {
-    const verification = await client.verify.v2.services('VA1bf0a0c5c9fe1d538062069a63ccd60f')
-      .verifications
-      .create({ to: '+917993291554', channel:  'whatsapp' }); 
+    // const verification = await client.verify.v2.services('VA1bf0a0c5c9fe1d538062069a63ccd60f')
+    //   .verifications
+    //   .create({ to: '+917993291554', channel:  'whatsapp' }); 
+    const verification = twilioService.create({ to: '+917993291554', channel:  'whatsapp' }); 
     console.log(verification);
     res.json({ status: verification.status });
   } catch (error) {
