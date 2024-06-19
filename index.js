@@ -24,13 +24,13 @@ const s3 = new AWS.S3();
 app.use(cors());
 app.use(express.json());
 
-const accountSid = 'AC1f39abf23cbe3d99676f15fadc70c59f';
-const authToken = '50532fcfadb6724923645fa00b42ba58';
+const accountSid = process.env.TWILIO_ACCOUNT_SID;
+const authToken = process.env.TWILIO_AUTH_ID;
 const client = require('twilio')(accountSid, authToken);
 
 app.post('/send-otp', async (req, res) => {
-  const { phoneNumber } = req.body;
-
+  const { phoneNumber } =  '+917993291554' //req.body;
+  console.log('Phone is :', phoneNumber);
   try {
     const verification = await client.verify.v2.services('VA1bf0a0c5c9fe1d538062069a63ccd60f')
       .verifications
