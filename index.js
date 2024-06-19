@@ -15,6 +15,7 @@ const upload = multer({
   storage: multer.memoryStorage()
 });
 
+  
 AWS.config.update({ region: 'us-east-1' });
 const dynamoDb = new AWS.DynamoDB.DocumentClient();
 const tableName = 'G7Cars';
@@ -31,7 +32,7 @@ app.post('/send-otp', async (req, res) => {
   const { phoneNumber } = req.body;
 
   try {
-    const verification = await client.verify.v2.services('VA1bf0a0c5c9fe1d538062069a63ccd60f')
+    const verification = await client.verify.v2.services('MGd688e4ca411679a70882ddad813f6c3d')
       .verifications
       .create({ to: `whatsapp:${phoneNumber}`, channel: 'whatsapp' }); 
 
@@ -47,7 +48,7 @@ app.post('/verify-otp', async (req, res) => {
   const { phoneNumber, code } = req.body;
 
   try {
-    const verification_check = await client.verify.v2.services('VA1bf0a0c5c9fe1d538062069a63ccd60f')
+    const verification_check = await client.verify.v2.services('MGd688e4ca411679a70882ddad813f6c3d')
       .verificationChecks
       .create({ to: `whatsapp:${phoneNumber}`, code });
 
