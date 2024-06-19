@@ -34,8 +34,8 @@ app.post('/send-otp', async (req, res) => {
   try {
     const verification = await client.verify.v2.services('VA1bf0a0c5c9fe1d538062069a63ccd60f')
       .verifications
-      .create({ to: `whatsapp:${phoneNumber}`, channel: 'whatsapp' }); 
-
+      .create({ to: `${phoneNumber}`, channel:  'whatsapp' }); 
+    console.log(verification);
     res.json({ status: verification.status });
   } catch (error) {
     console.error('Error sending OTP:', error);
