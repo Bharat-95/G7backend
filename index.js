@@ -27,7 +27,7 @@ app.use(express.json());
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_ID;
 const client = require('twilio')(accountSid, authToken);
-const twilioService = await client.verify.v2.services
+const twilioService =  client.verify.v2.services
                 .create({friendlyName: 'G7Cars',
                    "whatsapp.MsgServiceSid":'MGd688e4ca411679a70882ddad813f6c3d' })
                   //  .then(service => console.log('Service activation ** ' ,  service.sid));
