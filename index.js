@@ -30,6 +30,7 @@ const client = require('twilio')(accountSid, authToken);
 client.verify.v2.services
                 .create({friendlyName: 'G7Cars',
                    "whatsapp.MsgServiceSid":'MGd688e4ca411679a70882ddad813f6c3d' })
+                   .then(service => console.log(service.sid));
 
 app.post('/send-otp', async (req, res) => {
   const { phoneNumber } =  '+917993291554' //req.body;
