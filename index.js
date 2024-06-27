@@ -30,7 +30,6 @@ const client = require('twilio')(accountSid, authToken);
 const twilioService =  client.verify.v2.services
                 .create({friendlyName: 'G7Cars',
                    "whatsapp.MsgServiceSid":'MGd688e4ca411679a70882ddad813f6c3d' })
-                  //  .then(service => console.log('Service activation ** ' ,  service.sid));
 
 app.post('/send-otp', async (req, res) => {
   const { phoneNumber } =  '+917993291554' //req.body;
@@ -165,7 +164,7 @@ const generateSignature = (paymentId, orderId, secret) => {
 };
 
 app.post('/verify', async (req, res) => {
-  const { paymentId, orderId, signature: razorpay_signature, carId, pickupDateTime, dropoffDateTime, phoneNumber, ownerNumber } = req.body;
+  const { paymentId, orderId, signature: razorpay_signature, carId, pickupDateTime, dropoffDateTime, phoneNumber, ownerNumber, userId } = req.body;
 
   const userPhoneNumber = phoneNumber[0].phoneNumber;
 
@@ -183,7 +182,8 @@ app.post('/verify', async (req, res) => {
         dropoffDateTime,
         createdAt: new Date().toISOString(),
         status: 'confirmed',
-        paymentId: paymentId
+        paymentId: paymentId,
+        userId
       };
 
       const updateParams = {
@@ -203,7 +203,7 @@ app.post('/verify', async (req, res) => {
       await dynamoDb.update(updateParams).promise();
 
       const options = {
-        timeZone: 'Asia/Kolkata', // Set the time zone to IST
+        timeZone: 'Asia/Kolkata', 
         year: 'numeric',
         month: 'long',
         day: 'numeric',
