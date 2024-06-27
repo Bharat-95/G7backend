@@ -204,6 +204,7 @@ app.post('/verify', async (req, res) => {
 
       const bookingsTableParams = {
         TableName: 'Bookings',
+        Key: { G7cars123:  uuidv4() },
         Item: booking
       };
 
