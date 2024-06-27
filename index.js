@@ -202,6 +202,13 @@ app.post('/verify', async (req, res) => {
 
       await dynamoDb.update(updateParams).promise();
 
+      const bookingsTableParams = {
+        TableName: 'Bookings',
+        Item: booking
+      };
+
+      await dynamoDb.put(bookingsTableParams).promise();
+
       const options = {
         timeZone: 'Asia/Kolkata', 
         year: 'numeric',
@@ -217,7 +224,6 @@ app.post('/verify', async (req, res) => {
       
       const messageBody = `Your booking has been confirmed! Here are the details:\n\nBooking ID: ${bookingId}\nPayment ID: ${paymentId}\nPickup Date: ${pickupDateTimeIST}\nDrop-off Date: ${dropoffDateTimeIST}\n\nThank you for choosing us!`;
 
-      console.log(`Sending message to owner number: ${ownerNumber}`);
       
       await client.messages.create({
         body: messageBody,
