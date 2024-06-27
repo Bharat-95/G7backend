@@ -204,11 +204,16 @@ app.post('/verify', async (req, res) => {
 
       const bookingsTableParams = {
         TableName: 'Bookings',
-        Key: G7cars123,
-        Item: booking
+        Item: {
+          G7cars123: uuidv4(), 
+          ...booking,           
+          bookingId: bookingId,
+        }
       };
 
       await dynamoDb.put(bookingsTableParams).promise();
+
+    
 
       const options = {
         timeZone: 'Asia/Kolkata', 
