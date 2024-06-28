@@ -220,16 +220,9 @@ app.get('/cars', async (req, res) => {
     res.status(500).send('Unable to fetch available cars');
   }
 });
-
-app.get('/bookings/:userId', async (req, res) => {
-  const userId = req.params.userId;
-
+app.get('/bookings', async (req, res) => {
   const params = {
-    TableName: 'Bookings',
-    FilterExpression: 'userId = :userId',
-    ExpressionAttributeValues: {
-      ':userId': userId
-    }
+    TableName: 'Bookings'
   };
 
   try {
@@ -237,8 +230,8 @@ app.get('/bookings/:userId', async (req, res) => {
     const bookings = bookingData.Items;
     res.json(bookings);
   } catch (error) {
-    console.error('Error fetching bookings for user:', error);
-    res.status(500).send('Unable to fetch bookings for user');
+    console.error('Error fetching bookings:', error);
+    res.status(500).send('Unable to fetch bookings');
   }
 });
 
