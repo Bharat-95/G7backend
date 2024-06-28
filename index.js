@@ -24,62 +24,8 @@ const s3 = new AWS.S3();
 app.use(cors());
 app.use(express.json());
 
-const accountSid = process.env.TWILIO_ACCOUNT_SID;
-const authToken = process.env.TWILIO_AUTH_ID;
-const client = require('twilio')(accountSid, authToken);
-const twilioService =  client.verify.v2.services
-                .create({friendlyName: 'G7Cars',
-                   "whatsapp.MsgServiceSid":'MGd688e4ca411679a70882ddad813f6c3d' })
-
-app.post('/send-otp', async (req, res) => {
-  const { phoneNumber } =  '+917993291554' //req.body;
-  console.log('Phone is :', phoneNumber);
-  try {
-    // const verification = await client.verify.v2.services('VA1bf0a0c5c9fe1d538062069a63ccd60f')
-    //   .verifications
-    //   .create({ to: '+917993291554', channel:  'whatsapp' }); 
-    const verification = twilioService.verifications.create({ to: '+917993291554', channel:  'whatsapp' }); 
-    console.log(verification);
-    res.json({ status: verification.status });
-  } catch (error) {
-    console.error('Error sending OTP:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
 
 
-app.post('/verify-otp', async (req, res) => {
-  const { phoneNumber, code } = req.body;
-
-  try {
-    const verification_check = await client.verify.v2.services('VA1bf0a0c5c9fe1d538062069a63ccd60f')
-      .verificationChecks
-      .create({ to: `whatsapp:${phoneNumber}`, code });
-
-    res.json({ status: verification_check.status });
-  } catch (error) {
-    console.error('Error verifying OTP:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.post('/api/send-message', (req, res) => {
-  const { to, body } = req.body;
-
-  client.messages
-    .create({
-      body,
-      from: 'whatsapp:+12295446598',
-      to: `whatsapp:${to}`,
-    })
-    .then((message) => {
-      res.status(200).json({ success: true, sid: message.sid });
-    })
-    .catch((error) => {
-      console.error('Error sending message:', error);
-      res.status(500).json({ success: false, error: error.message });
-    });
-});
 
 app.post('/cars', upload.fields([
   { name: 'Coverimage', maxCount: 1 },
@@ -259,8 +205,6 @@ app.post('/verify', async (req, res) => {
 app.get('/cars', async (req, res) => {
   try {
     const { pickupDateTime, dropoffDateTime } = req.query;
-
-
     const carsData = await dynamoDb.scan({ TableName: tableName }).promise();
     const cars = carsData.Items;
 
@@ -276,6 +220,28 @@ app.get('/cars', async (req, res) => {
     res.status(500).send('Unable to fetch available cars');
   }
 });
+
+app.get('/bookings/:userId', async (req, res) => {
+  const userId = req.params.userId;
+
+  const params = {
+    TableName: 'Bookings',
+    FilterExpression: 'userId = :userId',
+    ExpressionAttributeValues: {
+      ':userId': userId
+    }
+  };
+
+  try {
+    const bookingData = await dynamoDb.scan(params).promise();
+    const bookings = bookingData.Items;
+    res.json(bookings);
+  } catch (error) {
+    console.error('Error fetching bookings for user:', error);
+    res.status(500).send('Unable to fetch bookings for user');
+  }
+});
+
 
 app.put('/cars/:carNo', async (req, res) => {
   const carNo = req.params.carNo;
