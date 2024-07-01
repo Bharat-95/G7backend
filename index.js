@@ -221,6 +221,31 @@ app.get('/cars', async (req, res) => {
   }
 });
 
+app.get('/cars/:carId', async (req, res) => {
+  const carId = req.params.carId;
+
+  const params = {
+    TableName: tableName,
+    Key: {
+      G7cars123: carId
+    }
+  };
+
+  try {
+    const carDetails = await dynamoDb.get(params).promise();
+    if (!carDetails.Item) {
+      return res.status(404).send('Car not found');
+    }
+
+    const carData = carDetails.Item;
+    res.status(200).json(carData);
+  } catch (error) {
+    console.error('Error fetching car details:', error);
+    res.status(500).send('Unable to fetch car details');
+  }
+});
+
+
 app.get('/bookings/:userId', async (req, res) => {
   const userId = req.params.userId;
 
