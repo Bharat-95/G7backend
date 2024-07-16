@@ -24,7 +24,9 @@ const s3 = new AWS.S3();
 app.use(cors());
 app.use(express.json());
 
-const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_ID);
+const accountSid = process.env.TWILIO_ACCOUNT_SID;
+const authToken = process.env.TWILIO_AUTH_ID;
+const client = twilio(accountSid, authToken);
 
 
 
@@ -178,14 +180,14 @@ app.post('/verify', async (req, res) => {
       const messageBody = `Your booking has been confirmed! Here are the details:\n\nBooking ID: ${bookingId}\nPayment ID: ${paymentId}\nPickup Date: ${pickupDateTimeIST}\nDrop-off Date: ${dropoffDateTimeIST}\n\nThank you for choosing us!`;
 
       
-      await twilioClient.messages.create({
+      await client.messages.create({
         body: messageBody,
         from: 'whatsapp:+12295446598',
         to: `whatsapp:${ownerNumber}`,
       }).then(message => console.log(`Message sent to owner, SID: ${message.sid}`))
         .catch(error => console.error(`Failed to send message to owner: ${error.message}`));
       
-      await twilioClient.messages.create({
+      await client.messages.create({
         body: messageBody,
         from: 'whatsapp:+12295446598',
         to: `whatsapp:${userPhoneNumber}`,
@@ -193,6 +195,8 @@ app.post('/verify', async (req, res) => {
         .catch(error => console.error(`Failed to send message to user: ${error.message}`));
 
       res.status(200).json({ status: 'success' });
+
+      console.log(messageBody)
     } catch (error) {
       console.error('Error confirming payment and updating status:', error);
       res.status(500).json({ status: 'failure', message: 'Failed to update booking and car status' });
