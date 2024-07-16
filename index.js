@@ -178,14 +178,14 @@ app.post('/verify', async (req, res) => {
       const messageBody = `Your booking has been confirmed! Here are the details:\n\nBooking ID: ${bookingId}\nPayment ID: ${paymentId}\nPickup Date: ${pickupDateTimeIST}\nDrop-off Date: ${dropoffDateTimeIST}\n\nThank you for choosing us!`;
 
       
-      await client.messages.create({
+      await twilioClient.messages.create({
         body: messageBody,
         from: 'whatsapp:+14155238886',
         to: `whatsapp:${ownerNumber}`,
       }).then(message => console.log(`Message sent to owner, SID: ${message.sid}`))
         .catch(error => console.error(`Failed to send message to owner: ${error.message}`));
       
-      await client.messages.create({
+      await twilioClient.messages.create({
         body: messageBody,
         from: 'whatsapp:+14155238886',
         to: `whatsapp:${userPhoneNumber}`,
