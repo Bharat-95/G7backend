@@ -24,7 +24,7 @@ const s3 = new AWS.S3();
 app.use(cors());
 app.use(express.json());
 
-const Client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_ID);
+const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_ID);
 
 
 
@@ -178,16 +178,16 @@ app.post('/verify', async (req, res) => {
       const messageBody = `Your booking has been confirmed! Here are the details:\n\nBooking ID: ${bookingId}\nPayment ID: ${paymentId}\nPickup Date: ${pickupDateTimeIST}\nDrop-off Date: ${dropoffDateTimeIST}\n\nThank you for choosing us!`;
 
       
-      await Client.messages.create({
+      await twilioClient.messages.create({
         body: messageBody,
-        from: 'whatsapp:+14155238886',
+        from: 'whatsapp:+12295446598',
         to: `whatsapp:${ownerNumber}`,
       }).then(message => console.log(`Message sent to owner, SID: ${message.sid}`))
         .catch(error => console.error(`Failed to send message to owner: ${error.message}`));
       
-      await Client.messages.create({
+      await twilioClient.messages.create({
         body: messageBody,
-        from: 'whatsapp:+14155238886',
+        from: 'whatsapp:+12295446598',
         to: `whatsapp:${userPhoneNumber}`,
       }).then(message => console.log(`Message sent to user, SID: ${message.sid}`))
         .catch(error => console.error(`Failed to send message to user: ${error.message}`));
