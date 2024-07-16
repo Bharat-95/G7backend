@@ -24,7 +24,7 @@ const s3 = new AWS.S3();
 app.use(cors());
 app.use(express.json());
 
-const accountSid = process.env.TWILIO_ACCOUNT_SID;
+const accountSid = 'AC1f39abf23cbe3d99676f15fadc70c59f';
 const authToken = process.env.TWILIO_AUTH_ID;
 const client = twilio(accountSid, authToken);
 
