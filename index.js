@@ -207,7 +207,7 @@ app.post("/verify", async (req, res) => {
       await client.messages
         .create({
           body: messageBody,
-          from: "whatsapp:+12295446598",
+          from: "whatsapp:+919133300025",
           to: `whatsapp:${ownerNumber}`,
         })
         .then((message) =>
@@ -220,7 +220,7 @@ app.post("/verify", async (req, res) => {
       await client.messages
         .create({
           body: messageBody,
-          from: "whatsapp:+12295446598",
+          from: "whatsapp:+919133300025",
           to: `whatsapp:${userPhoneNumber}`,
         })
         .then((message) =>
