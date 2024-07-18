@@ -1,0 +1,219 @@
+ire("express");const app = express();
+const port = process.env.PORT || 4000;
+const AWS = require("aws-sdk");
+const cors = require("cors");
+const { v4: uuidv4 } = require("uuid");
+const multer = require("multer");
+const crypto = require("crypto");
+const Razorpay = require("razorpay");
+const cron = require("node-cron");
+const twilio = require("twilio");
+require("dotenv").config();
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+});
+
+Aconfig.update({ region: "us-east-1" });
+const dynamoDb = new AWS.DynamoDB.DocumentClient();
+const tableName = "G7Cars";
+const s3 = new AWS.S3();
+
+app.use(cors());
+app.use(express.json());
+
+const accountSid = process.env.TWILIO_ACCOUNT_SID;const authToken = process.env.TWILIO_AUTH_ID;
+const client = twilio(accountSid, authToken);
+
+app.post(
+  "/cars",
+  upload.fields([
+    { name: "Coverimage", maxCount: 1 },
+    { name: "RcFront", maxCount: 1 },
+    { name: "RcBack", maxCount: 1 },
+    { name: "AdhaarFront", maxCount: 1 },
+    { name: "AdhaarBack", maxCount: 1 },
+    { name: "Insurance", maxCount: 1 },
+    { name: "Pollution", maxCount: 1 },
+    { name: "Images", maxCount: 50 },
+    { name: "AgreementDoc", maxCount: 1 },
+  ]),
+  async (req, res) => {
+    try {
+      const item = {
+        G7cars123: uuidv4(),
+        ...req.body,
+        status: "Available",
+      };
+
+      const imageFields = [
+        "Coverimage",
+        "RcFront",
+        "RcBack",
+        "AdhaarFront",
+        "AdhaarBack,
+        "Insurance",
+        "Pollution",
+        "AgreementDo
+    
+      for (const field of imageFields) {
+        if (req.files[field] && req.files[field].length > 0) {
+          const images = req.files[field];
+          const imageUrls = [];
+          for (const image of images) {
+            const params = {
+              Bucket: "g7cars",
+              Key: image.originalname,
+              Body: image.buffer,
+            };
+            const data = await s3.upload(params).promise();
+            imageUrls.push(data.Location);
+          }
+         item[field] = imageUrls;
+     
+     
+      const params = {
+        TableName: tableName,
+        Item: item,
+      };
+
+      await dynamoDb.put(params).promise();
+      res.status(200).send("Uploaded data and images successfully");
+    } catch (error) {
+      console.error("Unable to post details", error);
+      res.status(500).send("Unable to post details to DynamoDB");
+    }
+  }
+);
+
+const rzp = new Razorpay({
+  key_id: process.env.RAZORPAY_API_KEY,
+  key_secret: "EaXIwNI6oDhQX6ul7UjWrv25",
+});
+
+app.post("/order", (req, res) => {
+  const options = {
+    amount: req.body.amount * 100,
+    currency: "INR",
+    receipt: "order_rcptid_11",
+  };
+
+  rzp.orders.create(options, function (err, order) {
+    if (err) {
+      console.error("Error creating order:", err);
+      res.status(500).json({
+        message: "Order creation failed",
+        error: err,
+      });
+    } else {
+      res.status(200).json({ orderId: order.id });
+    }
+  });
+});
+const generateSignature = (paymentId, orderId, secret) => {
+  const data = `${orderId}|${paymentId}`;
+  cnst hmac = cypto.createHmac("sha256", secr
+  hmac.update(dat
+  const signature = hmac.digest("hex");
+  return signature;
+};
+
+app.post("/verify", async (req, res) => {
+  const {
+    paymentId,
+    orderId,
+    signature: razorpay_signature,
+    carId,
+    pickupDateTime,
+    dropoffDateTime,
+    phoneNumber,
+    ownerNumber,
+ serId,
+  } = req.body;
+
+  const userPhoneNumber = phoneNumber[0].phoneNumber;
+
+  const secret = "EaXIwNI6oDhQX6ul7UjWrv25";
+  const generated_signature = generateSignature(paymentId, orderId, secret);
+  const verificationSucceeded = generated_signature === razorpay_signature;
+
+  if (verificationSucceeded) {
+    try {
+     const bookingId = uuidv4();
+      const booking = {
+        bookingId,
+        carId,
+        pickupDateTime,
+        dropoffDateTime,
+        createdAt: new Date().toISOString(),
+        status: "confirmed",
+        payme     userId,
+      
+      const updateParams = {
+        TableName: tableName,
+       Key: { G7cars123: carId },
+        UpdateExpression:
+          "SET #bookings = list_append(if_not_exists(#bookings, :empty_list), :booking)",
+        ExpressionAttributeNames: {
+          "#bookings": "bookings",
+        },
+        ExpressionAttributeValues: {
+          ":booking": [booking],
+          ":empty_list": [],
+        },
+        ReturnValues: "ALL_NEW",
+      };
+
+      await dynamoDb.update(updateParams).promise();
+      const bookingsTableParams = {
+        TableName: "Book        Item: {
+          G7cars123: uuidv(),
+          ...booking,
+          bookingId: bookin,
+        },
+      };
+
+      await dynamoDb.put(bookingsTableParams).promise();
+
+      const options = {
+        timeZone: "Asia/Kolkata",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "numeric",
+        minute: "numeric",
+        second: "numeric
+
+      const pickupDateTimeIST = new Date(pickupDateTime).toLocaleString(
+        "en-IN",
+        options
+      );
+      const dropoffDateTimeIST = new Date(dropoffDateTime).toLocaleString(
+        "en-IN"
+        options
+      );
+
+      const messageBody = `Your booking has been confirmed! Here are the details:\n\nBooking ID: ${bookingId}\nPayment ID: ${paymentId}\nPickup Date: ${pickupDateTimeIST}\nDrop-off Date: ${dropoffDateTimeIST}\n\nThank you for choosing us!`;
+
+      await client.messages
+        .create({
+         body: messageBody,
+          from: "whatsapp:+919133300025",
+          to: `whatsapp:${ownerNumber        })
+        .then((message) =>
+          console.log(`Message sent to owner, SID: ${message.sid}`)
+        
+        .catch((error) =>
+          console.error(`Failed to send message to owner: ${error.message}`)
+    );
+
+      await client.messages
+        .create({
+          body: messageBody,
+          from: "whatsapp:+919133300025",
+          to: `whatsapp:${userPhoneNumber}`,
+        })
+        .then((message) =>
+          console.log(`Message sent to user, SID: ${message.sid}`)
+        )
+      
