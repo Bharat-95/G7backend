@@ -27,6 +27,8 @@ const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_ID;
 const client = twilio(accountSid, authToken);
 
+
+//posting car details to Dynamo Db and images to s3 getting data from Admin page
 app.post(
   "/cars",
   upload.fields([
@@ -89,12 +91,15 @@ app.post(
   }
 );
 
+
 const rzp = new Razorpay({
   key_id: process.env.RAZORPAY_API_KEY,
   key_secret: "EaXIwNI6oDhQX6ul7UjWrv25",
 });
 
 app.post("/order", (req, res) => {
+
+
   const options = {
     amount: req.body.amount * 100,
     currency: "INR",
@@ -114,6 +119,7 @@ app.post("/order", (req, res) => {
   });
 });
 
+//genrating signature to verify the paymnet received 
 const generateSignature = (paymentId, orderId, secret) => {
   const data = `${orderId}|${paymentId}`;
   const hmac = crypto.createHmac("sha256", secret);
@@ -155,6 +161,7 @@ app.post("/verify", async (req, res) => {
         userId,
       };
 
+      // saving details to bookings table
       const updateParams = {
         TableName: tableName,
         Key: { G7cars123: carId },
@@ -202,6 +209,7 @@ app.post("/verify", async (req, res) => {
         options
       );
 
+      //iniating twilio to send messages on cofirmation of payment
       const messageBody = `Your booking has been confirmed! Here are the details:\n\nBooking ID: ${bookingId}\nPayment ID: ${paymentId}\nPickup Date: ${pickupDateTimeIST}\nDrop-off Date: ${dropoffDateTimeIST}\n\nThank you for choosing us!`;
 
       await client.messages
@@ -248,6 +256,9 @@ app.post("/verify", async (req, res) => {
   }
 });
 
+
+//retrieving car details to show them in the searchcars page in frontend and app
+
 app.get("/cars", async (req, res) => {
   try {
     const { pickupDateTime, dropoffDateTime } = req.query;
@@ -291,6 +302,8 @@ app.get("/cars/:carId", async (req, res) => {
   }
 });
 
+
+// retreiving booking details as per the logged in user
 app.get("/bookings/:userId", async (req, res) => {
   const userId = req.params.userId;
 
@@ -312,6 +325,8 @@ app.get("/bookings/:userId", async (req, res) => {
   }
 });
 
+
+//editing car details in the admin page
 app.put("/cars/:carNo", async (req, res) => {
   const carNo = req.params.carNo;
 
@@ -339,6 +354,7 @@ app.put("/cars/:carNo", async (req, res) => {
   }
 });
 
+//user uploads documnets 
 app.post('/documents/upload', upload.fields([
   { name: 'DrivingLicense', maxCount: 1 },
   { name: 'Aadhaar', maxCount: 1 }
@@ -352,7 +368,7 @@ app.post('/documents/upload', upload.fields([
       email,
       phoneNumber,
       uploadedAt: new Date().toISOString(),
-      status: 'pending' 
+      status: 'pending'
     };
 
     const imageFields = ['DrivingLicense', 'Aadhaar'];
@@ -372,7 +388,9 @@ app.post('/documents/upload', upload.fields([
 
     const documentParams = {
       TableName: 'cxdocuments',
-      Item: documentData
+        Item :{
+        G7cars123: uuidv4(),
+        }
     };
 
     await dynamoDb.put(documentParams).promise();
@@ -384,13 +402,33 @@ app.post('/documents/upload', upload.fields([
   }
 });
 
-app.put('/documents/verify/:userId', async (req, res) => {
-  const { userId } = req.params;
+app.get('/documents', async (req, res) => {
+  try {
+    const params = {
+      TableName: 'cxdocuments',
+    };
+
+    const data = await dynamoDb.scan(params).promise();
+    res.status(200).json(data.Items);
+  } catch (error) {
+    console.error('Error fetching documents:', error);
+    res.status(500).send('Unable to fetch documents');
+  }
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});
+
+
+app.put('/documents/verify', async (req, res) => {
+
 
   try {
     const documentParams = {
       TableName: 'cxdocuments',
-      Key: { userId }
+      Key: { G7cars123:userId}
     };
 
     const documentData = await dynamoDb.get(documentParams).promise();
@@ -401,52 +439,49 @@ app.put('/documents/verify/:userId', async (req, res) => {
 
     const updatedDocumentData = {
       ...documentData.Item,
-      status: 'verified' 
+      status: 'verified'
     };
 
     const updateParams = {
       TableName: 'cxdocuments',
-      Item: updatedDocumentData
+      Key: { G7cars123:userId },
+      UpdateExpression: 'set #status = :status',
+      ExpressionAttributeNames: { '#status': 'status' },
+      ExpressionAttributeValues: { ':status': 'verified' }
     };
 
-    await dynamoDb.put(updateParams).promise();
+    await dynamoDb.update(updateParams).promise();
 
-    res.status(200).send('Document verification completed');
+    res.status(200).send('Document status updated to verified');
   } catch (error) {
     console.error('Error verifying documents:', error);
     res.status(500).send('Unable to verify documents');
   }
 });
 
-app.get('/proceed-to-payment/:userId', async (req, res) => {
+app.get('/users/:userId/documents/status', async (req, res) => {
   const { userId } = req.params;
 
   try {
     const documentParams = {
       TableName: 'cxdocuments',
-      Key: { userId }
+      Key: { G7cars123:userId }
     };
 
     const documentData = await dynamoDb.get(documentParams).promise();
 
-    if (!documentData.Item || !documentData.Item.status) {
-      return res.status(400).send('Please upload documents');
+    if (!documentData.Item) {
+      return res.status(404).send('Documents not found');
     }
 
-    if (documentData.Item.status === 'verified') {
-      res.redirect('/payment-page');
-    } else if (documentData.Item.status === 'pending') {
-      res.status(200).send('Documents are under verification');
-    } else {
-      res.status(400).send('Document status not recognized');
-    }
+    res.status(200).json({ status: documentData.Item.status });
   } catch (error) {
     console.error('Error fetching document status:', error);
-    res.status(500).send('Unable to proceed to payment');
+    res.status(500).send('Unable to fetch document status');
   }
 });
 
-
+//this route is to delete a car 
 app.delete("/cars/:carNo", async (req, res) => {
   const carNo = req.params.carNo;
 
