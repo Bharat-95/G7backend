@@ -10,9 +10,6 @@ const Razorpay = require("razorpay");
 const cron = require("node-cron");
 const twilio = require("twilio");
 require("dotenv").config();
-const { Clerk } = require("@clerk/clerk-sdk-node");
-
-const clerk = new Clerk({ secretKey: "sk_live_W2CftpmVQlah6VQzhprPao78eU3U8isZ4utscluQCo" });
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -23,6 +20,7 @@ const dynamoDb = new AWS.DynamoDB.DocumentClient();
 const tableName = "G7Cars";
 const s3 = new AWS.S3();
 
+
 app.use(cors());
 app.use(express.json());
 
@@ -31,89 +29,13 @@ const authToken = process.env.TWILIO_AUTH_ID;
 const client = twilio(accountSid, authToken);
 
 
-app.post("/signup", async (req, res) => {
-  try {
-    const { phoneNumber } = req.body;
-    if (!phoneNumber) return res.status(400).json({ message: "Phone number is required" });
-
-    // Check if user already exists
-    const existingUsers = await clerk.users.getUserList({ phoneNumber });
-    if (existingUsers.length > 0) {
-      return res.status(400).json({ message: "User already exists. Please log in." });
-    }
-
-    // Create a new user
-    const user = await clerk.users.createUser({
-      phoneNumber,
-    });
-
-    res.status(201).json({
-      message: "User created successfully",
-      userId: user.id,
-    });
-  } catch (error) {
-    console.error("Signup error:", error);
-    res.status(500).json({ message: "Signup failed", error: error.message });
-  }
-});
-
-app.post("/request-otp", async (req, res) => {
-  try {
-    const { phoneNumber } = req.body;
-    if (!phoneNumber) return res.status(400).json({ message: "Phone number is required" });
-
-    const otpSession = await clerk.phoneNumbers.createVerification({
-      identifier: phoneNumber,
-      strategy: "phone_code",
-    });
-
-    res.json({ sessionId: otpSession.id, message: "OTP sent to phone number" });
-  } catch (error) {
-    console.error("Error requesting OTP:", error);
-    res.status(500).json({ message: "Failed to send OTP", error: error.message });
-  }
-});
-
-/**
- * ✅ Verify OTP and Authenticate
- */
-app.post("/verify-otp", async (req, res) => {
-  try {
-    const { sessionId, code } = req.body;
-    if (!sessionId || !code) return res.status(400).json({ message: "Session ID and OTP are required" });
-
-    const verification = await clerk.phoneNumbers.attemptVerification({
-      sessionId,
-      code,
-    });
-
-    if (verification.status !== "verified") return res.status(400).json({ message: "Invalid OTP" });
-
-    const user = await clerk.users.getUser(verification.userId);
-    const token = await clerk.sessions.createToken({ userId: user.id });
-
-    res.json({
-      message: "OTP Verified",
-      token,
-      user: {
-        id: user.id,
-        phoneNumber: user.primaryPhoneNumber,
-        email: user.emailAddresses[0]?.emailAddress || null,
-      },
-    });
-  } catch (error) {
-    console.error("Error verifying OTP:", error);
-    res.status(500).json({ message: "Failed to verify OTP", error: error.message });
-  }
-});
-
 //posting car details to Dynamo Db and images to s3 getting data from Admin page
 app.post(
   "/cars",
   upload.fields([
     { name: "Coverimage", maxCount: 1 },
     { name: "RcFront", maxCount: 1 },
-    { name: "RcBack", maxCount: 1 },
+{ name: "RcBack", maxCount: 1 },
     { name: "AdhaarFront", maxCount: 1 },
     { name: "AdhaarBack", maxCount: 1 },
     { name: "Insurance", maxCount: 1 },
@@ -143,8 +65,7 @@ app.post(
         if (req.files[field] && req.files[field].length > 0) {
           const images = req.files[field];
           const imageUrls = [];
-          for (const image of images) {
-            const params = {
+          for (const image of images) {const params = {
               Bucket: "g7cars",
               Key: image.originalname,
               Body: image.buffer,
@@ -171,26 +92,26 @@ app.post(
 );
 
 
+//razorpay payment gateway
 const rzp = new Razorpay({
   key_id: process.env.RAZORPAY_API_KEY,
   key_secret: "EaXIwNI6oDhQX6ul7UjWrv25",
 });
 
-app.post("/order", (req, res) => {
-
-
-  const options = {
+//getting orderId an amount from confirmation oage of G7cars 
+app.post('/order', (req, res) => {
+ console.log('Received request:', req.body);const options = {
     amount: req.body.amount * 100,
     currency: "INR",
-    receipt: "order_rcptid_11",
+    receipt: "order_rcptid_11"
   };
 
   rzp.orders.create(options, function (err, order) {
     if (err) {
-      console.error("Error creating order:", err);
+      console.error('Error creating order:', err);
       res.status(500).json({
         message: "Order creation failed",
-        error: err,
+        error: err
       });
     } else {
       res.status(200).json({ orderId: order.id });
@@ -198,16 +119,15 @@ app.post("/order", (req, res) => {
   });
 });
 
+
 //genrating signature to verify the paymnet received 
 const generateSignature = (paymentId, orderId, secret) => {
-  const data = `${orderId}|${paymentId}`;
+  const data = ${orderId}|${paymentId};
   const hmac = crypto.createHmac("sha256", secret);
   hmac.update(data);
   const signature = hmac.digest("hex");
-  console.log("Generated Signature:", signature);
   return signature;
 };
-
 app.post("/verify", async (req, res) => {
   const {
     paymentId,
@@ -223,82 +143,109 @@ app.post("/verify", async (req, res) => {
   } = req.body;
 
   const userPhoneNumber = phoneNumber[0].phoneNumber;
+
   const secret = "EaXIwNI6oDhQX6ul7UjWrv25";
   const generated_signature = generateSignature(paymentId, orderId, secret);
   const verificationSucceeded = generated_signature === razorpay_signature;
 
   if (verificationSucceeded) {
     try {
-      const existingBookingParams = {
+      const bookingId = bookingId
+      const booking = {
+        bookingId,
+        carId,
+        pickupDateTime,
+        dropoffDateTime,
+        createdAt: new Date().toISOString(),
+        status: "Active",
+        paymentId: paymentId,
+        userId,
+        bookignId, 
+      };
+ // saving details to bookings table
+      const updateParams = {
+        TableName: tableName,
+        Key: { G7cars123: carId },
+        UpdateExpression:
+          "SET #bookings = list_append(if_not_exists(#bookings, :empty_list), :booking)",
+        ExpressionAttributeNames: {
+          "#bookings": "bookings",
+        },
+        ExpressionAttributeValues: {
+          ":booking": [booking],
+          ":empty_list": [],
+        },
+        ReturnValues: "ALL_NEW",
+      };
+
+      await dynamoDb.update(updateParams).promise();
+
+      const bookingsTableParams = {
         TableName: "Bookings",
-        Key: {
-          G7cars123: bookingId, // Use bookingId as the partition key
+        Item: {
+          G7cars123: uuidv4(),
+          ...booking,
+          bookingId: bookingId,
         },
       };
 
-      console.log("Fetching existing booking with params:", existingBookingParams);
+      await dynamoDb.put(bookingsTableParams).promise();const options = {
+        timeZone: "Asia/Kolkata",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "numeric",
+        minute: "numeric",
+        second: "numeric",
+      };
 
-      const existingBooking = await dynamoDb.get(existingBookingParams).promise();
-      console.log("Existing booking fetched:", existingBooking);
+      const pickupDateTimeIST = new Date(pickupDateTime).toLocaleString(
+        "en-IN",
+        options
+      );
+      const dropoffDateTimeIST = new Date(dropoffDateTime).toLocaleString(
+        "en-IN",
+        options
+      );
 
-      const currentTime = new Date().toISOString();
-      if (existingBooking.Item) {
-        console.log("Booking exists, updating dropoff date for ID:", existingBooking.Item.bookingId);
+      //iniating twilio to send messages on cofirmation of payment
+      const messageBody = Your booking has been confirmed! Here are the details:\n\nBooking ID: ${bookingId}\nPayment ID: ${paymentId}\nPickup Date: ${>
 
-const updateParams = {
-          TableName: "Bookings",
-          Key: {
-           G7cars123: existingBooking.Item.G7cars123,
-          },
-UpdateExpression: "SET dropoffDateTime = :newDropoffDateTime, #status = :status, paymentId = :paymentId",
-ExpressionAttributeNames: {
-  "#status": "status"
-},
-ExpressionAttributeValues: {
-  ":newDropoffDateTime": dropoffDateTime,
-  ":status": "Active", // Update status as needed
-  ":paymentId": paymentId,
-}
-        };
-        console.log("Updating booking with params:", updateParams);
-        await dynamoDb.update(updateParams).promise();
+      await client.messages
+        .create({
+          body: messageBody,
+          from: "whatsapp:+919133300025",
+          to: whatsapp:${ownerNumber},
+        })
+        .then((message) =>
+          console.log(Message sent to owner, SID: ${message.sid})
+        )
+        .catch((error) =>
+          console.error(Failed to send message to owner: ${error.message})
+        );await client.messages
+        .create({
+          body: messageBody,
+          from: "whatsapp:+919133300025",
+          to: whatsapp:${userPhoneNumber},
+        })
+        .then((message) =>
+          console.log(Message sent to user, SID: ${message.sid})
+        )
+        .catch((error) =>
+          console.error(Failed to send message to user: ${error.message})
+        );
 
-        // Send notifications...
+      res.status(200).json({ status: "success" });
 
-        res.status(200).json({ status: "success" });
-      } else {
-        console.log("No existing booking found. Creating a new booking.");
-        const newBookingParams = {
-          TableName: "Bookings",
-          Item: {
-            G7cars123: bookingId, // Set G7cars123 to bookingId
-            bookingId: bookingId,
-            carId    : carId,
-            paymentId: paymentId,
-            orderId: orderId,
-            dropoffDateTime: dropoffDateTime,
-            pickupDateTime: pickupDateTime,
-            userId: userId,
-            ownerNumber: ownerNumber,
-            phoneNumber: userPhoneNumber,
-            status: "Active", // Set status as needed
-            createdAt: currentTime, // Optional: Add timestamp for when the booking is created
-          },
-        };
-
-        console.log("Creating new booking with params:", newBookingParams);
-        await dynamoDb.put(newBookingParams).promise();
-
-        // Send notifications...
-
-        res.status(201).json({ status: "success", message: "New booking created." });
-      }
+      console.log(messageBody);
     } catch (error) {
       console.error("Error confirming payment and updating status:", error);
-      res.status(500).json({
-        status: "failure",
-        message: "Failed to update or create booking.",
-      });
+      res
+        .status(500)
+        .json({
+          status: "failure",
+          message: "Failed to update booking and car status",
+        });
     }
   } else {
     console.log("Payment verification failed");
@@ -306,27 +253,58 @@ ExpressionAttributeValues: {
   }
 });
 
-//retrieving car details to show them in the searchcars page in frontend and app
-
 app.get("/cars", async (req, res) => {
-  try {
-    const { pickupDateTime, dropoffDateTime } = req.query;
-    const carsData = await dynamoDb.scan({ TableName: tableName }).promise();
-    const cars = carsData.Items;
+    try {
+      const { pickupDateTime, dropoffDateTime } = req.query;
+      const carsData = await dynamoDb.scan({ TableName: tableName }).promise();
+      const cars = carsData.Items;
+  
+      for (const car of cars) {
+        if (!isCarAvailable(car, pickupDateTime, dropoffDateTime)) {
+          car.Availability = "Booked";
+        } else {
+          car.Availability = "Available";
+        }
+      }
+  
+      res.json(cars);
+    } catch (error) {
+      console.error("Error fetching available cars:", error);
+      res.status(500).send("Unable to fetch available cars");
+    }
+  });
+  
+  function isCarAvailable(car, pickupDateTime, dropoffDateTime) {
+    const bookings = car.bookings || [];
+    const newPickupTime = new Date(pickupDateTime);
+    const newDropoffTime = new Date(dropoffDateTime);
+    const twelveHours = 12 * 60 * 60 * 1000; // 12 hours in milliseconds
+  
+    for (const booking of bookings) {
+      const bookingPickupTime = new Date(booking.pickupDateTime);
+      const bookingDropoffTime = new Date(booking.dropoffDateTime);
+  
+      // Check if new pickup or dropoff overlaps with any existing booking
+      if (
+        (newPickupTime < bookingDropoffTime && newDropoffTime > bookingPickupTime)
+      ) {
+        return false;
+      }
 
-    for (const car of cars) {
-      if (!isCarAvailable(car, pickupDateTime, dropoffDateTime)) {
-        car.Availability = "Booked";
+
+      console.log(`Checking car availability for new pickup: ${newPickupTime}, new dropoff: ${newDropoffTime}`);
+console.log(`Existing booking from ${bookingPickupTime} to ${bookingDropoffTime}`);
+
+  
+      // Check if new pickup date is at least 12 hours after the existing drop-off date
+      if (newPickupTime < new Date(bookingDropoffTime.getTime() + twelveHours)) {
+        return false;
       }
     }
-
-    res.json(cars);
-  } catch (error) {
-    console.error("Error fetching available cars:", error);
-    res.status(500).send("Unable to fetch available cars");
+  
+    return true;
   }
-});
-
+  
 app.get("/cars/:carId", async (req, res) => {
   const carId = req.params.carId;
 
@@ -341,9 +319,7 @@ app.get("/cars/:carId", async (req, res) => {
     const carDetails = await dynamoDb.get(params).promise();
     if (!carDetails.Item) {
       return res.status(404).send("Car not found");
-    }
-
-    const carData = carDetails.Item;
+    }const carData = carDetails.Item;
     res.status(200).json(carData);
   } catch (error) {
     console.error("Error fetching car details:", error);
@@ -373,9 +349,6 @@ app.get("/bookings/:userId", async (req, res) => {
     res.status(500).send("Unable to fetch bookings for user");
   }
 });
-
-
-//editing car details in the admin page
 app.put("/cars/:carNo", async (req, res) => {
   const carNo = req.params.carNo;
 
@@ -401,13 +374,7 @@ app.put("/cars/:carNo", async (req, res) => {
     console.error("Error updating car data:", error);
     res.status(500).send("Unable to update car data");
   }
-});
-
-//user uploads documnets 
-app.post('/documents/upload', upload.fields([
-  { name: 'DrivingLicense', maxCount: 1 },
-  { name: 'Aadhaar', maxCount: 1 }
-]), async (req, res) => {
+});app.post('/documents/upload', upload.any(), async (req, res) => {
   try {
     const { name, email, phoneNumber, userId } = req.body;
 
@@ -420,37 +387,48 @@ app.post('/documents/upload', upload.fields([
       status: 'pending'
     };
 
-    const imageFields = ['DrivingLicense', 'Aadhaar'];
-    for (const field of imageFields) {
-      if (req.files[field] && req.files[field].length > 0) {
-        const document = req.files[field][0];
-        const params = {
-          Bucket: 'g7cars',
-          Key: `${userId}/${field}_${Date.now()}_${document.originalname}`,
-          Body: document.buffer
-        };
-
-        await s3.upload(params).promise();
-        documentData[`${field}Url`] = params.Key;
-      }
-    }
+    req.files.forEach(file => {
+      const fieldName = file.fieldname;
+      const params = {
+        Bucket: 'g7cars',
+        Key: ${userId}/${fieldName}_${Date.now()}_${file.originalname},
+        Body: file.buffer
+      };
+      s3.upload(params).promise();
+      documentData[${fieldName}Url] = params.Key;
+    });
 
     const documentParams = {
       TableName: 'cxdocuments',
-        Item :{
-        G7cars123: uuidv4(),
-        }
+      Item: {
+        G7cars123: userId,
+        ...documentData,
+      }
     };
+await dynamoDb.put(documentParams).promise();
 
-    await dynamoDb.put(documentParams).promise();
+    // Send SMS notification using Twilio
+    const messageBody = Hi ${name}, your documents have been uploaded and are under verification. We will notify you once the verification is complete.>
 
-    res.status(200).send('Documents uploaded successfully');
+    await client.messages
+      .create({
+        body: messageBody,
+        from: "whatsapp:+919133300025",
+        to: whatsapp:+91${phoneNumber}
+      })
+      .then((message) =>
+        console.log(SMS sent to user, SID: ${message.sid})
+      )
+      .catch((error) =>
+        console.error(Failed to send SMS to user: ${error.message})
+      );
+
+    res.status(200).send('Documents uploaded successfully and SMS notification sent');
   } catch (error) {
     console.error('Error uploading documents:', error);
     res.status(500).send('Unable to upload documents');
   }
 });
-
 app.get('/documents/pending', async (req, res) => {
   try {
     const params = {
@@ -476,19 +454,29 @@ app.get('/documents/pending', async (req, res) => {
     res.status(500).send('Unable to fetch pending documents');
   }
 });
+app.get('/documents', async (req, res) => {
+  try {
+    const documentParams = {
+      TableName: 'cxdocuments'
+    };
 
-app.put('/documents/verify/:userId', async (req, res) => {
+    const documentData = await dynamoDb.scan(documentParams).promise();
+
+    res.status(200).json(documentData.Items);
+  } catch (error) {
+    console.error('Error fetching documents:', error);
+    res.status(500).send('Unable to fetch documents');
+  }
+});
+app.put('/documents/verify', async (req, res) => {
   const { userId } = req.params;
 
   try {
     const documentParams = {
       TableName: 'cxdocuments',
-      Key: { G7cars123:userId}
     };
 
     const documentData = await dynamoDb.get(documentParams).promise();
-
- 
 
     if (!documentData.Item) {
       return res.status(404).send('Documents not found');
@@ -511,25 +499,22 @@ app.put('/documents/verify/:userId', async (req, res) => {
 
     res.status(200).send('Document status updated to verified');
   } catch (error) {
-    console.error('Error verifying documents:', error);
+console.error('Error verifying documents:', error);
     res.status(500).send('Unable to verify documents');
   }
-});
-
-app.get('/users/:userId/documents/status', async (req, res) => {
+});app.get('/users/:userId/documents/status', async (req, res) => {
   const { userId } = req.params;
 
   try {
     const documentParams = {
       TableName: 'cxdocuments',
-      Key: { G7cars123:userId }
+      Key: { G7cars123: userId } // Ensure userId is correctly used as key
     };
 
     const documentData = await dynamoDb.get(documentParams).promise();
 
+    console.log('Document Data:', JSON.stringify(documentData, null, 2)); // Debugging line
 
-
-    console.log(dynamoDb.get(documentParams).promise())
     if (!documentData.Item) {
       return res.status(404).send('Documents not found');
     }
@@ -539,10 +524,7 @@ app.get('/users/:userId/documents/status', async (req, res) => {
     console.error('Error fetching document status:', error);
     res.status(500).send('Unable to fetch document status');
   }
-});
-
-//this route is to delete a car 
-app.delete("/cars/:carNo", async (req, res) => {
+});app.delete("/cars/:carNo", async (req, res) => {
   const carNo = req.params.carNo;
 
   const params = {
@@ -577,8 +559,7 @@ app.delete("/cars/:carNo", async (req, res) => {
         }
       }
     }
-
-    await dynamoDb.delete(params).promise();
+await dynamoDb.delete(params).promise();
 
     await Promise.all(
       imageUrls.map(async (imageUrl) => {
@@ -609,8 +590,12 @@ async function updateCarAvailability() {
     const carsData = await dynamoDb.scan({ TableName: tableName }).promise();
     const cars = carsData.Items;
     for (const car of cars) {
-      const carId = car.G7cars123;
+      const carId = car.carId;
       const isAvailable = isCarAvailable(car, now);
+      const updateCarParams = {
+        TableName: tableName,
+        Key: { G7cars123: carId },
+const isAvailable = isCarAvailable(car, now);
       const updateCarParams = {
         TableName: tableName,
         Key: { G7cars123: carId },
@@ -633,113 +618,99 @@ async function updateCarAvailability() {
   }
 }
 
-  function isCarAvailable(car, pickupDateTime, dropoffDateTime) {
-    const bookings = car.bookings || [];
-    const pickupTime = new Date(pickupDateTime);
-    const dropoffTime = new Date(dropoffDateTime);
-    let isAvailable = true;
+function isCarAvailable(car, pickupDateTime, dropoffDateTime) {
+  const bookings = car.bookings || [];
+  const pickupTime = new Date(pickupDateTime);
+  const dropoffTime = new Date(dropoffDateTime);
+  let isAvailable = true;
+ for (const booking of bookings) {
+    const bookingPickupTime = new Date(booking.pickupDateTime);
+    const bookingDropoffTime = new Date(booking.dropoffDateTime);
 
-    for (const booking of bookings) {
-      const bookingPickupTime = new Date(booking.pickupDateTime);
-      const bookingDropoffTime = new Date(booking.dropoffDateTime);
-
-      if (
-        (pickupTime >= bookingPickupTime && pickupTime < bookingDropoffTime) ||
-        (dropoffTime > bookingPickupTime && dropoffTime <= bookingDropoffTime) ||
-        (pickupTime <= bookingPickupTime && dropoffTime >= bookingDropoffTime)
-      ) {
-        isAvailable = false;
-        break;
-      }
+    if (
+      (pickupTime >= bookingPickupTime && pickupTime < bookingDropoffTime) ||
+      (dropoffTime > bookingPickupTime && dropoffTime <= bookingDropoffTime) ||
+      (pickupTime <= bookingPickupTime && dropoffTime >= bookingDropoffTime)
+    ) {
+      isAvailable = false;
+      break;
     }
-
-    if (isAvailable) {
-      if (bookings.length > 0) {
-        const lastBooking = bookings[bookings.length - 1];
-        if (new Date() >= new Date(lastBooking.dropoffDateTime)) {
-          return true;
-        }
-      }
-    }
-
-    return isAvailable;
   }
 
-  cron.schedule("0 * * * *", () => {
-    console.log("Running scheduled task to update car availability");
-    updateCarAvailability();
-  });
+  if (isAvailable) {
+    if (bookings.length > 0) {
+      const lastBooking = bookings[bookings.length - 1];
+      if (new Date() >= new Date(lastBooking.dropoffDateTime)) {
+        return true;
+      }
+    }
+  }
 
-  async function updateCarAndBookingStatus() {
-    try {
-      const now = new Date().toISOString();
-  
-      // Scan all cars to check their availability
-      const carsData = await dynamoDb.scan({ TableName: 'G7Cars' }).promise();
-      const cars = carsData.Items;
-  
-      for (const car of cars) {
-        const carId = car.G7cars123
-        const carAvailability = car.Availability
-  
-        console.log(`Checking car with ID: ${carId}, Availability: ${carAvailability}`);
-  
-        if (carAvailability === "Available") {
-          // Scan the Bookings table to find related bookings based on carId (G7cars123)
-          const bookingsData = await dynamoDb.query({
-            TableName: 'Bookings',
-            KeyConditionExpression: 'G7cars123 = :userId',
-            ExpressionAttributeValues: {
-              ':userId':  userId  
-            }
-          }).promise();
-  
-          const bookings = bookingsData.Items;
-          console.log(`Bookings found for car ID ${carId}:`, bookings);
-  
+  return isAvailable;
+}async function updateCarAndBookingStatus() {
+  try {
+    // Scan all cars in G7Cars to check their availability
+    const carsData = await dynamoDb.scan({ TableName: 'G7Cars' }).promise();
+    const cars = carsData.Items;
+
+    for (const car of cars) {
+      const carAvailability = car.Availability
+      const carId = car.bookings.carId;
+
+      console.log(Checking car with ID: ${carId}, Availability: ${carAvailability});
+
+      // If the car is Available, update bookings status to Completed
+      if (carAvailability === "Available") {
+        // Fetch bookings related to this car from the Bookings table
+        const bookingsData = await dynamoDb.query({
+          TableName: 'Bookings',
+          KeyConditionExpression: 'G7cars123 = :carId',
+          ExpressionAttributeValues: {
+            ':carId':  carId 
+          }
+        }).promise();
+
+        const bookings = bookingsData.Items;
+
+        // If there are bookings, update the status to Completed
+        if (bookings.length > 0) {
           for (let booking of bookings) {
-            // Check the status and update the booking status to "Completed" if it is "Active"
-            if (booking.status === "Active") { 
+            if (booking.status === "Active") {
               const updateParams = {
-                TableName: 'Bookings',
-                Key: { 
-                  G7cars123: booking.G7cars123, // Use the partition key
-                  bookingId: booking.bookingId  // Use the sort key
+                TableName: 'Bookings',Key: {
+                  G7cars123: booking.G7cars123,
+                  bookingId: booking.bookingId  
                 },
                 UpdateExpression: "SET #status = :status",
                 ExpressionAttributeNames: {
                   "#status": "status"
                 },
                 ExpressionAttributeValues: {
-                  ":status":  "Completed" // Use correct type for Completed
+                  ":status": "Completed" // Update status to Completed
                 },
                 ReturnValues: "ALL_NEW"
               };
-              await dynamoDb.update(updateParams).promise();
+
+              const result = await dynamoDb.update(updateParams).promise();
+              console.log(Booking ${booking.bookingId} updated to Completed, result);
             }
           }
+        } else {
+          console.log(No bookings found for car ID: ${carId});
         }
       }
-  
-      console.log("Booking statuses updated successfully");
-    } catch (error) {
-      console.error("Error updating booking statuses:", error);
     }
+
+    console.log("Booking statuses updated successfully");
+  } catch (error) {
+    console.error("Error updating booking statuses:", error);
   }
-
-    cron.schedule("0 * * * *", () => {
-      console.log("Running scheduled task to update car availability and booking status");
-      updateCarAndBookingStatus();
-    });
-
-
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
+}cron.schedule('* * * * *', () => {
+  console.log('Running scheduled task to update car availability and booking status');
+  updateCarAvailability();
+  updateCarAndBookingStatus();
 });
 
-
-
-
-
-
-
+app.listen(port, () => {
+  console.log(Server is running on port ${port});
+});
